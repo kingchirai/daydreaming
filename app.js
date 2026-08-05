@@ -1,14 +1,34 @@
 (() => {
   "use strict";
 
-  const STORY_WIDTH = 1080;
-  const STORY_HEIGHT = 1920;
+  const CANVAS_WIDTH = 1080;
+  const CANVAS_HEIGHT = 1920;
 
-  const VISION = Object.freeze({
+  const COLORS = Object.freeze({
+    background: "#0F1123",
+    lavender: "#D8B4F8",
+    gold: "#F4A261",
+    text: "#F9F4FF",
+    muted: "#C2BCD0"
+  });
+
+  const FONT_FAMILIES = Object.freeze({
+    serif: '"Cormorant Garamond", Georgia, serif',
+    sans: '"Inter", Arial, sans-serif'
+  });
+
+  const VISIONS = Object.freeze({
     SUNSET: "Watching the sunset in comfortable silence every night",
     KITCHEN: "Slow dancing in a cozy kitchen 50 years from today",
     TRAVEL: "Traveling the world side-by-side, never losing the initial spark",
     HAVEN: "Tucked away in a quiet haven, completely hidden from the rest of the world"
+  });
+
+  const SHORT_VISIONS = Object.freeze({
+    [VISIONS.SUNSET]: "Watching sunsets in comfortable silence",
+    [VISIONS.KITCHEN]: "Slow dancing in our kitchen, 50 years from now",
+    [VISIONS.TRAVEL]: "Traveling the world side-by-side",
+    [VISIONS.HAVEN]: "Hidden away together in a quiet haven"
   });
 
   const ARCHETYPES = Object.freeze({
@@ -30,88 +50,83 @@
     }
   });
 
-  const form = document.querySelector("#daydream-form");
+  const form = document.querySelector("#romantic-profile-form");
+  const formStatus = document.querySelector("#form-status");
   const canvas = document.querySelector("#story-canvas");
-  const previewImage = document.querySelector("#story-preview-image");
-  const resultDialog = document.querySelector("#result-dialog");
-  const closeDialogButton = document.querySelector("#close-dialog");
+  const preview = document.querySelector("#story-preview");
+  const dialog = document.querySelector("#result-dialog");
+  const closeDialogButton = document.querySelector("#close-dialog-button");
   const downloadButton = document.querySelector("#download-button");
   const shareButton = document.querySelector("#share-button");
-  const startAgainButton = document.querySelector("#start-again-button");
-  const formStatus = document.querySelector("#form-status");
+  const editAnswersButton = document.querySelector("#edit-answers-button");
   const shareStatus = document.querySelector("#share-status");
 
   if (
     !form ||
+    !formStatus ||
     !canvas ||
-    !previewImage ||
-    !resultDialog ||
+    !preview ||
+    !dialog ||
     !closeDialogButton ||
     !downloadButton ||
     !shareButton ||
-    !startAgainButton
+    !editAnswersButton ||
+    !shareStatus
   ) {
-    console.error("The Daydreaming app could not initialise because required elements are missing.");
+    console.error("The CHIRAI romantic profile app could not initialise.");
     return;
   }
 
   const context = canvas.getContext("2d");
-  let currentDataUrl = "";
+
+  if (!context) {
+    formStatus.textContent = "Your browser does not support story image generation.";
+    return;
+  }
+
+  let generatedDataUrl = "";
+  let generatedBlob = null;
   let currentArchetype = ARCHETYPES.DAYDREAMER;
 
-  canvas.width = STORY_WIDTH;
-  canvas.height = STORY_HEIGHT;
-
-  function determineArchetype(loveLanguage, foreverVision) {
-    const romanticLoveLanguages = new Set([
+  function getArchetype(loveLanguage, foreverVision) {
+    const romanticLanguages = new Set([
       "Quality time",
       "Words of affirmation"
     ]);
 
-    const sanctuaryLoveLanguages = new Set([
+    const sanctuaryLanguages = new Set([
       "Physical touch",
       "Acts of service"
     ]);
 
     if (
-      foreverVision === VISION.KITCHEN ||
+      foreverVision === VISIONS.KITCHEN ||
       (
-        foreverVision === VISION.SUNSET &&
-        romanticLoveLanguages.has(loveLanguage)
+        foreverVision === VISIONS.SUNSET &&
+        romanticLanguages.has(loveLanguage)
       )
     ) {
       return ARCHETYPES.ROMANTIC;
     }
 
     if (
-      foreverVision === VISION.HAVEN ||
+      foreverVision === VISIONS.HAVEN ||
       (
-        foreverVision === VISION.SUNSET &&
-        sanctuaryLoveLanguages.has(loveLanguage)
+        foreverVision === VISIONS.SUNSET &&
+        sanctuaryLanguages.has(loveLanguage)
       )
     ) {
       return ARCHETYPES.SANCTUARY;
     }
 
-    if (foreverVision === VISION.TRAVEL) {
+    if (foreverVision === VISIONS.TRAVEL) {
       return ARCHETYPES.ADVENTURER;
     }
 
     return ARCHETYPES.DAYDREAMER;
   }
 
-  function shortenForeverVision(foreverVision) {
-    const shortenedVisions = {
-      [VISION.SUNSET]: "Watching sunsets in comfortable silence",
-      [VISION.KITCHEN]: "Slow dancing in the kitchen, 50 years from now",
-      [VISION.TRAVEL]: "Traveling the world side-by-side",
-      [VISION.HAVEN]: "Hidden away together in a quiet haven"
-    };
-
-    return shortenedVisions[foreverVision] || foreverVision;
-  }
-
-  function getFormAnswers() {
+  function getAnswers() {
     const data = new FormData(form);
 
     return {
@@ -121,7 +136,20 @@
     };
   }
 
-  function roundRect(ctx, x, y, width, height, radius) {
+  async function loadCanvasFonts() {
+    if (!document.fonts || typeof document.fonts.load !== "function") {
+      return;
+    }
+
+    await Promise.all([
+      document.fonts.load(`700 100px ${FONT_FAMILIES.serif}`),
+      document.fonts.load(`italic 600 48px ${FONT_FAMILIES.serif}`),
+      document.fonts.load(`700 28px ${FONT_FAMILIES.sans}`),
+      document.fonts.ready
+    ]);
+  }
+
+  function roundedRect(ctx, x, y, width, height, radius) {
     const safeRadius = Math.min(radius, width / 2, height / 2);
 
     ctx.beginPath();
@@ -141,7 +169,7 @@
     for (const word of words) {
       const testLine = currentLine ? `${currentLine} ${word}` : word;
 
-      if (ctx.measureText(testLine).width <= maxWidth || !currentLine) {
+      if (!currentLine || ctx.measureText(testLine).width <= maxWidth) {
         currentLine = testLine;
       } else {
         lines.push(currentLine);
@@ -162,130 +190,131 @@
     });
   }
 
-  function drawLetterSpacedText(ctx, text, x, y, spacing) {
-    let cursorX = x;
+  function drawTrackedCenteredText(ctx, text, centerX, y, tracking) {
+    const characters = Array.from(text);
+    const widths = characters.map((character) => ctx.measureText(character).width);
 
-    for (const character of text) {
+    const totalWidth =
+      widths.reduce((sum, width) => sum + width, 0) +
+      tracking * Math.max(0, characters.length - 1);
+
+    let cursorX = centerX - totalWidth / 2;
+
+    characters.forEach((character, index) => {
       ctx.fillText(character, cursorX, y);
-      cursorX += ctx.measureText(character).width + spacing;
-    }
-
-    return cursorX;
+      cursorX += widths[index] + tracking;
+    });
   }
 
-  function stringToSeed(value) {
-    let seed = 2166136261;
+  function drawRadialGlow(ctx, x, y, radius, colorStops) {
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
 
-    for (let index = 0; index < value.length; index += 1) {
-      seed ^= value.charCodeAt(index);
-      seed = Math.imul(seed, 16777619);
-    }
+    colorStops.forEach(([offset, color]) => {
+      gradient.addColorStop(offset, color);
+    });
 
-    return seed >>> 0;
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   }
 
-  function createSeededRandom(seed) {
-    let state = seed >>> 0;
-
-    return () => {
-      state += 0x6D2B79F5;
-      let result = state;
-      result = Math.imul(result ^ (result >>> 15), result | 1);
-      result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
-      return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  function drawBackground(ctx, seedText) {
-    ctx.clearRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
-    ctx.fillStyle = "#111116";
-    ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
-
-    const topGlow = ctx.createRadialGradient(160, 150, 0, 160, 150, 650);
-    topGlow.addColorStop(0, "rgba(255, 157, 206, 0.34)");
-    topGlow.addColorStop(0.45, "rgba(184, 164, 255, 0.13)");
-    topGlow.addColorStop(1, "rgba(17, 17, 22, 0)");
-    ctx.fillStyle = topGlow;
-    ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
-
-    const lowerGlow = ctx.createRadialGradient(920, 1560, 0, 920, 1560, 760);
-    lowerGlow.addColorStop(0, "rgba(136, 215, 255, 0.24)");
-    lowerGlow.addColorStop(0.42, "rgba(167, 255, 217, 0.08)");
-    lowerGlow.addColorStop(1, "rgba(17, 17, 22, 0)");
-    ctx.fillStyle = lowerGlow;
-    ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
-
-    const wash = ctx.createLinearGradient(0, 0, STORY_WIDTH, STORY_HEIGHT);
-    wash.addColorStop(0, "rgba(255, 255, 255, 0.025)");
-    wash.addColorStop(0.48, "rgba(255, 255, 255, 0)");
-    wash.addColorStop(1, "rgba(184, 164, 255, 0.045)");
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, STORY_WIDTH, STORY_HEIGHT);
-
-    const random = createSeededRandom(stringToSeed(seedText));
+  function drawBackground(ctx) {
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     ctx.save();
-    for (let index = 0; index < 42; index += 1) {
-      const x = 70 + random() * 940;
-      const y = 120 + random() * 1660;
-      const radius = 0.8 + random() * 2.6;
-      const alpha = 0.12 + random() * 0.45;
+    ctx.globalCompositeOperation = "screen";
 
+    drawRadialGlow(ctx, 180, 250, 650, [
+      [0, "rgba(216, 180, 248, 0.45)"],
+      [0.42, "rgba(216, 180, 248, 0.14)"],
+      [1, "rgba(216, 180, 248, 0)"]
+    ]);
+
+    drawRadialGlow(ctx, 920, 860, 570, [
+      [0, "rgba(244, 162, 97, 0.32)"],
+      [0.5, "rgba(244, 162, 97, 0.10)"],
+      [1, "rgba(244, 162, 97, 0)"]
+    ]);
+
+    drawRadialGlow(ctx, 260, 1760, 560, [
+      [0, "rgba(216, 180, 248, 0.24)"],
+      [0.5, "rgba(216, 180, 248, 0.07)"],
+      [1, "rgba(216, 180, 248, 0)"]
+    ]);
+
+    ctx.restore();
+
+    const wash = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    wash.addColorStop(0, "rgba(255,255,255,0.03)");
+    wash.addColorStop(0.5, "rgba(255,255,255,0)");
+    wash.addColorStop(1, "rgba(244,162,97,0.035)");
+
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.save();
+
+    roundedRect(ctx, 42, 42, CANVAS_WIDTH - 84, CANVAS_HEIGHT - 84, 36);
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const borderGradient = ctx.createLinearGradient(65, 65, CANVAS_WIDTH - 65, CANVAS_HEIGHT - 65);
+    borderGradient.addColorStop(0, COLORS.lavender);
+    borderGradient.addColorStop(0.48, "rgba(216,180,248,0.15)");
+    borderGradient.addColorStop(1, COLORS.gold);
+
+    roundedRect(ctx, 64, 64, CANVAS_WIDTH - 128, CANVAS_HEIGHT - 128, 28);
+    ctx.strokeStyle = borderGradient;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.72;
+    ctx.stroke();
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = 0.24;
+
+    const stars = [
+      [132, 310, 2.1], [904, 260, 1.8], [812, 525, 1.5],
+      [195, 760, 1.8], [940, 1120, 2.2], [160, 1380, 1.4],
+      [845, 1540, 1.8], [310, 1685, 1.5], [630, 280, 1.1],
+      [525, 990, 1.3], [740, 1750, 1.2], [284, 1120, 1.2]
+    ];
+
+    stars.forEach(([x, y, radius]) => {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.fillStyle = "#FFFFFF";
       ctx.fill();
-    }
-    ctx.restore();
+    });
 
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.13)";
-    ctx.lineWidth = 2;
-    roundRect(ctx, 40, 40, STORY_WIDTH - 80, STORY_HEIGHT - 80, 36);
-    ctx.stroke();
-
-    const borderGradient = ctx.createLinearGradient(40, 40, STORY_WIDTH - 40, STORY_HEIGHT - 40);
-    borderGradient.addColorStop(0, "rgba(255, 157, 206, 0.9)");
-    borderGradient.addColorStop(0.5, "rgba(184, 164, 255, 0.3)");
-    borderGradient.addColorStop(1, "rgba(136, 215, 255, 0.9)");
-    ctx.strokeStyle = borderGradient;
-    ctx.lineWidth = 4;
-    roundRect(ctx, 58, 58, STORY_WIDTH - 116, STORY_HEIGHT - 116, 28);
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
-    ctx.lineWidth = 1;
-
-    for (let y = 300; y <= 1660; y += 170) {
-      ctx.beginPath();
-      ctx.moveTo(76, y);
-      ctx.lineTo(1004, y);
-      ctx.stroke();
-    }
     ctx.restore();
   }
 
   function drawHeader(ctx) {
     ctx.save();
-    ctx.fillStyle = "#f7f4ff";
-    ctx.font = '700 27px Arial, sans-serif';
-    ctx.textAlign = "left";
+    ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    drawLetterSpacedText(ctx, "CHIRAI // DAYDREAMING", 92, 124, 3.7);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `800 25px ${FONT_FAMILIES.sans}`;
 
-    ctx.fillStyle = "#ff9dce";
-    ctx.beginPath();
-    ctx.arc(944, 124, 8, 0, Math.PI * 2);
-    ctx.fill();
+    drawTrackedCenteredText(
+      ctx,
+      "CHIRAI // DAYDREAMING",
+      CANVAS_WIDTH / 2,
+      135,
+      6
+    );
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(92, 178);
-    ctx.lineTo(988, 178);
+    ctx.moveTo(110, 205);
+    ctx.lineTo(970, 205);
     ctx.stroke();
+
     ctx.restore();
   }
 
@@ -294,112 +323,159 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = "rgba(247, 244, 255, 0.62)";
-    ctx.font = '700 24px Arial, sans-serif';
-    ctx.fillText("YOUR DAYDREAMING ARCHETYPE", STORY_WIDTH / 2, 430);
+    ctx.fillStyle = "rgba(249,244,255,0.64)";
+    ctx.font = `700 22px ${FONT_FAMILIES.sans}`;
+    drawTrackedCenteredText(
+      ctx,
+      "YOUR ROMANTIC PROFILE",
+      CANVAS_WIDTH / 2,
+      405,
+      5
+    );
 
-    ctx.font = '900 92px Arial, sans-serif';
-    const titleLines = wrapText(ctx, archetype.name, 830);
-    const titleLineHeight = 100;
+    let titleFontSize = 110;
+    ctx.font = `700 ${titleFontSize}px ${FONT_FAMILIES.serif}`;
+    let titleLines = wrapText(ctx, archetype.name, 830);
+
+    if (titleLines.length > 3) {
+      titleFontSize = 94;
+      ctx.font = `700 ${titleFontSize}px ${FONT_FAMILIES.serif}`;
+      titleLines = wrapText(ctx, archetype.name, 830);
+    }
+
+    const titleLineHeight = titleFontSize * 0.9;
     const titleBlockHeight = titleLines.length * titleLineHeight;
     const titleStartY = 620 - titleBlockHeight / 2 + titleLineHeight / 2;
 
-    ctx.shadowColor = "rgba(184, 164, 255, 0.28)";
+    ctx.fillStyle = COLORS.lavender;
+    ctx.shadowColor = "rgba(216,180,248,0.26)";
     ctx.shadowBlur = 34;
-    ctx.fillStyle = "#f7f4ff";
-    drawCenteredLines(ctx, titleLines, STORY_WIDTH / 2, titleStartY, titleLineHeight);
+
+    drawCenteredLines(
+      ctx,
+      titleLines,
+      CANVAS_WIDTH / 2,
+      titleStartY,
+      titleLineHeight
+    );
+
     ctx.shadowBlur = 0;
 
-    const accentGradient = ctx.createLinearGradient(230, 0, 850, 0);
-    accentGradient.addColorStop(0, "#ff9dce");
-    accentGradient.addColorStop(0.5, "#b8a4ff");
-    accentGradient.addColorStop(1, "#88d7ff");
-    ctx.fillStyle = accentGradient;
-    roundRect(ctx, 306, 758, 468, 6, 3);
+    const accentLine = ctx.createLinearGradient(350, 0, 730, 0);
+    accentLine.addColorStop(0, COLORS.lavender);
+    accentLine.addColorStop(1, COLORS.gold);
+
+    ctx.fillStyle = accentLine;
+    roundedRect(ctx, 350, 790, 380, 6, 3);
     ctx.fill();
 
-    ctx.font = 'italic 43px Georgia, "Times New Roman", serif';
-    const taglineLines = wrapText(ctx, `“${archetype.tagline}”`, 770);
-    const taglineLineHeight = 60;
-    ctx.fillStyle = "#dcd5ec";
-    drawCenteredLines(ctx, taglineLines, STORY_WIDTH / 2, 872, taglineLineHeight);
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
+
+    const quoteLines = wrapText(
+      ctx,
+      `“${archetype.tagline}”`,
+      790
+    );
+
+    drawCenteredLines(
+      ctx,
+      quoteLines,
+      CANVAS_WIDTH / 2,
+      900,
+      56
+    );
 
     ctx.restore();
   }
 
-  function drawStat(ctx, label, value, x, y, maxWidth) {
+  function drawStatRow(ctx, label, value, y, isLast = false) {
+    const left = 138;
+    const valueX = 430;
+
     ctx.save();
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
-    ctx.fillStyle = "#ff9dce";
-    ctx.font = '700 24px Arial, sans-serif';
-    drawLetterSpacedText(ctx, label.toUpperCase(), x, y, 2.4);
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `800 22px ${FONT_FAMILIES.sans}`;
+    ctx.fillText(label, left, y);
 
-    ctx.fillStyle = "#f7f4ff";
-    ctx.font = '600 36px Arial, sans-serif';
-    const valueLines = wrapText(ctx, value, maxWidth);
-    const lineHeight = 47;
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `600 29px ${FONT_FAMILIES.sans}`;
 
-    valueLines.forEach((line, index) => {
-      ctx.fillText(line, x, y + 54 + index * lineHeight);
+    const lines = wrapText(ctx, value.toUpperCase(), 505).slice(0, 2);
+
+    lines.forEach((line, index) => {
+      ctx.fillText(line, valueX, y + index * 36);
     });
 
-    ctx.restore();
+    if (!isLast) {
+      const lineY = y + Math.max(68, lines.length * 36 + 28);
+      ctx.strokeStyle = "rgba(255,255,255,0.11)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(left, lineY);
+      ctx.lineTo(942, lineY);
+      ctx.stroke();
+    }
 
-    return y + 54 + valueLines.length * lineHeight;
+    ctx.restore();
   }
 
   function drawStats(ctx, answers) {
-    const x = 112;
-    const y = 1125;
-    const width = 856;
-    const height = 490;
+    const boxX = 92;
+    const boxY = 1120;
+    const boxWidth = 896;
+    const boxHeight = 470;
 
     ctx.save();
-    roundRect(ctx, x, y, width, height, 28);
-    ctx.fillStyle = "rgba(10, 10, 14, 0.54)";
+
+    roundedRect(ctx, boxX, boxY, boxWidth, boxHeight, 32);
+    ctx.fillStyle = "rgba(12,14,31,0.62)";
     ctx.fill();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
+
+    ctx.strokeStyle = "rgba(216,180,248,0.25)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(255, 255, 255, 0.055)";
-    roundRect(ctx, x + 18, y + 18, width - 36, height - 36, 20);
-    ctx.fill();
-
-    const contentX = x + 54;
-    const contentWidth = width - 108;
-
-    let cursorY = y + 76;
-    cursorY = drawStat(
-      ctx,
-      "Love language",
-      answers.loveLanguage,
-      contentX,
-      cursorY,
-      contentWidth
-    ) + 38;
-
-    cursorY = drawStat(
-      ctx,
-      "Mindset",
-      answers.mindset,
-      contentX,
-      cursorY,
-      contentWidth
-    ) + 38;
-
-    drawStat(
-      ctx,
-      "Forever vision",
-      shortenForeverVision(answers.foreverVision),
-      contentX,
-      cursorY,
-      contentWidth
+    const insetGradient = ctx.createLinearGradient(
+      boxX,
+      boxY,
+      boxX + boxWidth,
+      boxY + boxHeight
     );
 
+    insetGradient.addColorStop(0, "rgba(216,180,248,0.07)");
+    insetGradient.addColorStop(1, "rgba(244,162,97,0.04)");
+
+    roundedRect(ctx, boxX + 18, boxY + 18, boxWidth - 36, boxHeight - 36, 24);
+    ctx.fillStyle = insetGradient;
+    ctx.fill();
+
     ctx.restore();
+
+    drawStatRow(
+      ctx,
+      "LOVE LANGUAGE",
+      answers.loveLanguage,
+      boxY + 92
+    );
+
+    drawStatRow(
+      ctx,
+      "MINDSET",
+      answers.mindset,
+      boxY + 225
+    );
+
+    drawStatRow(
+      ctx,
+      "FOREVER VISION",
+      SHORT_VISIONS[answers.foreverVision] || answers.foreverVision,
+      boxY + 358,
+      true
+    );
   }
 
   function drawFooter(ctx) {
@@ -407,99 +483,114 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = "rgba(247, 244, 255, 0.68)";
-    ctx.font = '500 25px Arial, sans-serif';
-    ctx.fillText("Listen to ‘Daydreaming’ out now on all platforms.", STORY_WIDTH / 2, 1742);
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `600 26px ${FONT_FAMILIES.sans}`;
+    ctx.fillText(
+      "Listen to ‘Daydreaming’ out now on all platforms.",
+      CANVAS_WIDTH / 2,
+      1740
+    );
 
-    const pillGradient = ctx.createLinearGradient(350, 0, 730, 0);
-    pillGradient.addColorStop(0, "#ff9dce");
-    pillGradient.addColorStop(0.5, "#b8a4ff");
-    pillGradient.addColorStop(1, "#88d7ff");
+    ctx.fillStyle = "rgba(249,244,255,0.55)";
+    ctx.font = `700 19px ${FONT_FAMILIES.sans}`;
+    drawTrackedCenteredText(
+      ctx,
+      "CHIRAI",
+      CANVAS_WIDTH / 2,
+      1820,
+      6
+    );
 
-    roundRect(ctx, 369, 1790, 342, 58, 29);
-    ctx.fillStyle = pillGradient;
-    ctx.fill();
-
-    ctx.fillStyle = "#111116";
-    ctx.font = '800 22px Arial, sans-serif';
-    ctx.fillText("CHIRAI // DAYDREAMING", STORY_WIDTH / 2, 1820);
     ctx.restore();
   }
 
-  function renderStoryAsset(answers, archetype) {
-    if (!context) {
-      throw new Error("Your browser could not create the story image.");
-    }
+  function renderStory(answers, archetype) {
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
 
-    const seedText = `${answers.loveLanguage}|${answers.mindset}|${answers.foreverVision}`;
-
-    drawBackground(context, seedText);
+    drawBackground(context);
     drawHeader(context);
     drawArchetype(context, archetype);
     drawStats(context, answers);
     drawFooter(context);
 
-    currentDataUrl = canvas.toDataURL("image/png");
-    previewImage.src = currentDataUrl;
-    previewImage.alt = `CHIRAI Daydreaming result: ${archetype.name}`;
+    generatedDataUrl = canvas.toDataURL("image/png");
+    preview.src = generatedDataUrl;
+    preview.alt = `${archetype.name} CHIRAI romantic profile story graphic`;
   }
 
-  function openResultDialog() {
-    if (typeof resultDialog.showModal === "function") {
-      if (!resultDialog.open) {
-        resultDialog.showModal();
+  function canvasToBlob() {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("The PNG file could not be generated."));
+        }
+      }, "image/png");
+    });
+  }
+
+  function getFileName() {
+    const slug = currentArchetype.name
+      .toLowerCase()
+      .replace(/^the\s+/, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    return `chirai-romantic-profile-${slug}.png`;
+  }
+
+  function openDialog() {
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) {
+        dialog.showModal();
       }
     } else {
-      resultDialog.setAttribute("open", "");
+      dialog.setAttribute("open", "");
     }
 
     closeDialogButton.focus();
   }
 
-  function closeResultDialog() {
-    if (typeof resultDialog.close === "function") {
-      resultDialog.close();
+  function closeDialog() {
+    if (typeof dialog.close === "function") {
+      dialog.close();
     } else {
-      resultDialog.removeAttribute("open");
+      dialog.removeAttribute("open");
     }
   }
 
-  function buildFileName() {
-    return `chirai-daydreaming-${currentArchetype.name
-      .toLowerCase()
-      .replace(/^the\s+/, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")}.png`;
-  }
-
-  function downloadCurrentImage() {
-    if (!currentDataUrl) {
-      shareStatus.textContent = "Generate your story before downloading it.";
+  async function downloadImage() {
+    if (!generatedDataUrl) {
+      shareStatus.textContent = "Generate your romantic profile first.";
       return;
     }
 
-    const link = document.createElement("a");
-    link.href = currentDataUrl;
-    link.download = buildFileName();
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    shareStatus.textContent = "Your 1080 × 1920 PNG is downloading.";
+    try {
+      const blob = generatedBlob || await canvasToBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = getFileName();
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      shareStatus.textContent = "Your 1080 × 1920 PNG is downloading.";
+    } catch (error) {
+      console.error(error);
+      shareStatus.textContent = "The PNG could not be downloaded. Please try again.";
+    }
   }
 
-  async function dataUrlToFile(dataUrl, fileName) {
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
-
-    return new File([blob], fileName, {
-      type: "image/png",
-      lastModified: Date.now()
-    });
-  }
-
-  async function shareCurrentImage() {
-    if (!currentDataUrl) {
-      shareStatus.textContent = "Generate your story before sharing it.";
+  async function shareImage() {
+    if (!generatedDataUrl) {
+      shareStatus.textContent = "Generate your romantic profile first.";
       return;
     }
 
@@ -507,10 +598,15 @@
     shareStatus.textContent = "";
 
     try {
-      const file = await dataUrlToFile(currentDataUrl, buildFileName());
+      const blob = generatedBlob || await canvasToBlob();
+      const file = new File([blob], getFileName(), {
+        type: "image/png",
+        lastModified: Date.now()
+      });
+
       const shareData = {
-        title: "Daydreaming with CHIRAI",
-        text: `My CHIRAI Daydreaming archetype is ${currentArchetype.name}.`,
+        title: "Day Dreaming with CHIRAI",
+        text: `My CHIRAI romantic profile is ${currentArchetype.name}.`,
         files: [file]
       };
 
@@ -527,17 +623,19 @@
       if (typeof navigator.share === "function") {
         await navigator.share({
           title: shareData.title,
-          text: `${shareData.text} Download your own result at ${window.location.href}`,
+          text: shareData.text,
           url: window.location.href
         });
+
         shareStatus.textContent =
-          "Your browser shared the page link. Download the PNG to share the image itself.";
+          "The page link was shared. Download the PNG to share the image directly.";
         return;
       }
 
-      downloadCurrentImage();
+      await downloadImage();
+
       shareStatus.textContent =
-        "Image sharing is not supported in this browser, so the PNG was downloaded instead.";
+        "Your browser does not support native sharing, so the PNG was downloaded instead.";
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         shareStatus.textContent = "Sharing was cancelled.";
@@ -551,57 +649,85 @@
     }
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
     formStatus.textContent = "";
     shareStatus.textContent = "";
 
-    if (!form.reportValidity()) {
+    if (!form.checkValidity()) {
       formStatus.textContent = "Please answer all three questions.";
+      form.reportValidity();
       return;
     }
 
-    const answers = getFormAnswers();
+    const answers = getAnswers();
 
     if (!answers.loveLanguage || !answers.mindset || !answers.foreverVision) {
       formStatus.textContent = "Please answer all three questions.";
       return;
     }
 
-    currentArchetype = determineArchetype(
-      answers.loveLanguage,
-      answers.foreverVision
-    );
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton?.querySelector("span");
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    if (originalButtonText) {
+      originalButtonText.textContent = "CREATING YOUR PROFILE...";
+    }
 
     try {
-      renderStoryAsset(answers, currentArchetype);
-      openResultDialog();
+      await loadCanvasFonts();
+
+      currentArchetype = getArchetype(
+        answers.loveLanguage,
+        answers.foreverVision
+      );
+
+      renderStory(answers, currentArchetype);
+      generatedBlob = await canvasToBlob();
+
+      openDialog();
     } catch (error) {
       console.error(error);
       formStatus.textContent =
-        "Something went wrong while creating your image. Please try again.";
+        "Something went wrong while creating your profile. Please try again.";
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+      }
+
+      if (originalButtonText) {
+        originalButtonText.textContent = "TELL ME MY ROMANTIC PROFILE";
+      }
     }
   });
 
-  downloadButton.addEventListener("click", downloadCurrentImage);
-  shareButton.addEventListener("click", shareCurrentImage);
-  closeDialogButton.addEventListener("click", closeResultDialog);
+  downloadButton.addEventListener("click", downloadImage);
+  shareButton.addEventListener("click", shareImage);
+  closeDialogButton.addEventListener("click", closeDialog);
 
-  startAgainButton.addEventListener("click", () => {
-    closeResultDialog();
-    form.querySelector('input[type="radio"]:checked')?.focus();
+  editAnswersButton.addEventListener("click", () => {
+    closeDialog();
+
+    const checkedInput = form.querySelector('input[type="radio"]:checked');
+    checkedInput?.focus();
   });
 
-  resultDialog.addEventListener("click", (event) => {
-    const dialogBounds = resultDialog.getBoundingClientRect();
+  dialog.addEventListener("click", (event) => {
+    const bounds = dialog.getBoundingClientRect();
+
     const clickedOutside =
-      event.clientX < dialogBounds.left ||
-      event.clientX > dialogBounds.right ||
-      event.clientY < dialogBounds.top ||
-      event.clientY > dialogBounds.bottom;
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom;
 
     if (clickedOutside) {
-      closeResultDialog();
+      closeDialog();
     }
   });
 })();
