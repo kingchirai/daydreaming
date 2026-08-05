@@ -2,29 +2,27 @@
   color-scheme: dark;
 
   --background: #0f1123;
-  --surface: rgba(24, 26, 52, 0.88);
-  --surface-strong: #171a34;
-  --surface-soft: rgba(255, 255, 255, 0.045);
+  --surface: rgba(22, 24, 48, 0.9);
+  --surface-strong: #171931;
+  --surface-soft: rgba(255, 255, 255, 0.05);
 
   --lavender: #d8b4f8;
-  --lavender-soft: rgba(216, 180, 248, 0.15);
   --gold: #f4a261;
-  --gold-soft: rgba(244, 162, 97, 0.14);
+  --pink: #f5b3cf;
 
-  --text: #f9f4ff;
-  --muted: #b8b4c8;
+  --text: #f8f4ff;
+  --muted: #b7b4c8;
   --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(216, 180, 248, 0.44);
-  --error: #ffb0bd;
+  --line-strong: rgba(216, 180, 248, 0.4);
+  --error: #ffb1be;
 
   --font-serif: "Cormorant Garamond", Georgia, serif;
   --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   --radius-large: 30px;
   --radius-medium: 18px;
-  --radius-small: 13px;
-
-  --shadow-large: 0 28px 85px rgba(3, 4, 18, 0.5);
+  --radius-small: 14px;
+  --shadow-large: 0 30px 90px rgba(4, 6, 20, 0.55);
 }
 
 * {
@@ -41,8 +39,8 @@ body {
   margin: 0;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 16% 4%, rgba(216, 180, 248, 0.13), transparent 30rem),
-    radial-gradient(circle at 94% 34%, rgba(244, 162, 97, 0.09), transparent 28rem),
+    radial-gradient(circle at 15% 4%, rgba(216, 180, 248, 0.14), transparent 28rem),
+    radial-gradient(circle at 93% 30%, rgba(244, 162, 97, 0.09), transparent 30rem),
     var(--background);
   color: var(--text);
   font-family: var(--font-sans);
@@ -63,25 +61,25 @@ label {
   -webkit-tap-highlight-color: transparent;
 }
 
-.page-glow {
+.bg-glow {
   position: fixed;
   z-index: -1;
   width: 28rem;
   height: 28rem;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.15;
+  filter: blur(95px);
+  opacity: 0.14;
   pointer-events: none;
 }
 
-.page-glow--lavender {
+.bg-glow--lavender {
   top: -12rem;
   left: -10rem;
   background: var(--lavender);
 }
 
-.page-glow--gold {
-  right: -12rem;
+.bg-glow--gold {
+  right: -11rem;
   bottom: -12rem;
   background: var(--gold);
 }
@@ -134,7 +132,7 @@ label {
   border: 1px solid var(--line);
   border-radius: var(--radius-large);
   background:
-    linear-gradient(145deg, rgba(216, 180, 248, 0.07), transparent 35%),
+    linear-gradient(145deg, rgba(216, 180, 248, 0.07), transparent 34%),
     var(--surface);
   box-shadow: var(--shadow-large);
   backdrop-filter: blur(22px);
@@ -166,7 +164,7 @@ label {
 .question-group {
   min-width: 0;
   margin: 0;
-  padding: 1.25rem 0;
+  padding: 1.2rem 0;
   border: 0;
   border-bottom: 1px solid var(--line);
 }
@@ -279,7 +277,7 @@ label {
 .answer-card input:checked + span {
   border-color: var(--lavender);
   background:
-    linear-gradient(120deg, var(--lavender-soft), var(--gold-soft)),
+    linear-gradient(120deg, rgba(216, 180, 248, 0.16), rgba(244, 162, 97, 0.09)),
     rgba(255, 255, 255, 0.04);
   color: var(--text);
   box-shadow: inset 0 0 0 1px rgba(216, 180, 248, 0.12);

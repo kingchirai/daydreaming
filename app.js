@@ -3,14 +3,7 @@
 
   const CANVAS_WIDTH = 1080;
   const CANVAS_HEIGHT = 1920;
-
-  const COLORS = Object.freeze({
-    background: "#0F1123",
-    lavender: "#D8B4F8",
-    gold: "#F4A261",
-    text: "#F9F4FF",
-    muted: "#C2BCD0"
-  });
+  const PRESS_IMAGE_PATH = "./chirai-press.jpg";
 
   const FONT_FAMILIES = Object.freeze({
     serif: '"Cormorant Garamond", Georgia, serif',
@@ -33,20 +26,76 @@
 
   const ARCHETYPES = Object.freeze({
     ROMANTIC: {
+      key: "romantic",
+      index: "01/04",
       name: "THE LIFELONG ROMANTIC",
-      tagline: "Day Dreaming, seeing visions of us in a life far from here"
+      tagline: "Day Dreaming, seeing visions of us in a life far from here",
+      palette: {
+        base: "#0F1123",
+        accent: "#D8B4F8",
+        accentTwo: "#F5B3CF",
+        quote: "#F4A261",
+        overlayTop: "rgba(15,17,35,0.28)",
+        overlayBottom: "rgba(15,17,35,0.82)",
+        glowA: "rgba(216,180,248,0.50)",
+        glowB: "rgba(245,179,207,0.34)",
+        glowC: "rgba(244,162,97,0.20)"
+      },
+      kicker: "Apparently, this is how I imagine forever."
     },
     SANCTUARY: {
+      key: "sanctuary",
+      index: "02/04",
       name: "THE SANCTUARY SEEKER",
-      tagline: "Day Dreaming, seeing visions of us in the house on a hill"
+      tagline: "Day Dreaming, seeing visions of us in the house on a hill",
+      palette: {
+        base: "#0C1021",
+        accent: "#D8B4F8",
+        accentTwo: "#99B9F7",
+        quote: "#EFC284",
+        overlayTop: "rgba(12,16,33,0.34)",
+        overlayBottom: "rgba(8,10,20,0.86)",
+        glowA: "rgba(153,185,247,0.30)",
+        glowB: "rgba(216,180,248,0.28)",
+        glowC: "rgba(244,162,97,0.12)"
+      },
+      kicker: "Quiet love. Safe love. The world can wait."
     },
     ADVENTURER: {
+      key: "adventurer",
+      index: "03/04",
       name: "THE ETERNAL ADVENTURER",
-      tagline: "I come to realise, that it was all part of the plan"
+      tagline: "I come to realise, that it was all part of the plan",
+      palette: {
+        base: "#10142A",
+        accent: "#F4A261",
+        accentTwo: "#D8B4F8",
+        quote: "#F7D38E",
+        overlayTop: "rgba(16,20,42,0.24)",
+        overlayBottom: "rgba(11,12,24,0.82)",
+        glowA: "rgba(244,162,97,0.42)",
+        glowB: "rgba(216,180,248,0.25)",
+        glowC: "rgba(255,214,136,0.16)"
+      },
+      kicker: "Love, but make it feel like the horizon."
     },
     DAYDREAMER: {
+      key: "daydreamer",
+      index: "04/04",
       name: "THE DAYDREAMER",
-      tagline: "Day Dreaming, seeing visions of us"
+      tagline: "Day Dreaming, seeing visions of us",
+      palette: {
+        base: "#0E1124",
+        accent: "#D8B4F8",
+        accentTwo: "#F4A261",
+        quote: "#F4A261",
+        overlayTop: "rgba(14,17,36,0.28)",
+        overlayBottom: "rgba(8,10,22,0.84)",
+        glowA: "rgba(216,180,248,0.38)",
+        glowB: "rgba(244,162,97,0.20)",
+        glowC: "rgba(255,255,255,0.08)"
+      },
+      kicker: "I’m somewhere between a memory and a vision."
     }
   });
 
@@ -73,7 +122,7 @@
     !editAnswersButton ||
     !shareStatus
   ) {
-    console.error("The CHIRAI romantic profile app could not initialise.");
+    console.error("The CHIRAI Day Dreaming app could not initialise.");
     return;
   }
 
@@ -87,6 +136,7 @@
   let generatedDataUrl = "";
   let generatedBlob = null;
   let currentArchetype = ARCHETYPES.DAYDREAMER;
+  let pressImage = null;
 
   function getArchetype(loveLanguage, foreverVision) {
     const romanticLanguages = new Set([
@@ -142,11 +192,27 @@
     }
 
     await Promise.all([
-      document.fonts.load(`700 100px ${FONT_FAMILIES.serif}`),
+      document.fonts.load(`700 110px ${FONT_FAMILIES.serif}`),
       document.fonts.load(`italic 600 48px ${FONT_FAMILIES.serif}`),
-      document.fonts.load(`700 28px ${FONT_FAMILIES.sans}`),
+      document.fonts.load(`700 27px ${FONT_FAMILIES.sans}`),
       document.fonts.ready
     ]);
+  }
+
+  function loadPressImage() {
+    if (pressImage) {
+      return Promise.resolve(pressImage);
+    }
+
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => {
+        pressImage = image;
+        resolve(image);
+      };
+      image.onerror = () => reject(new Error("The CHIRAI press image could not be loaded."));
+      image.src = PRESS_IMAGE_PATH;
+    });
   }
 
   function roundedRect(ctx, x, y, width, height, radius) {
@@ -193,7 +259,6 @@
   function drawTrackedCenteredText(ctx, text, centerX, y, tracking) {
     const characters = Array.from(text);
     const widths = characters.map((character) => ctx.measureText(character).width);
-
     const totalWidth =
       widths.reduce((sum, width) => sum + width, 0) +
       tracking * Math.max(0, characters.length - 1);
@@ -206,300 +271,290 @@
     });
   }
 
-  function drawRadialGlow(ctx, x, y, radius, colorStops) {
+  function drawRadialGlow(ctx, x, y, radius, color) {
     const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-
-    colorStops.forEach(([offset, color]) => {
-      gradient.addColorStop(offset, color);
-    });
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.45, color.replace(/0\.\d+\)/, "0.10)"));
+    gradient.addColorStop(1, color.replace(/0\.\d+\)/, "0)"));
 
     ctx.fillStyle = gradient;
     ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   }
 
-  function drawBackground(ctx) {
+  function drawImageCover(ctx, image, dx, dy, dWidth, dHeight) {
+    const imageRatio = image.width / image.height;
+    const destinationRatio = dWidth / dHeight;
+
+    let sx = 0;
+    let sy = 0;
+    let sWidth = image.width;
+    let sHeight = image.height;
+
+    if (imageRatio > destinationRatio) {
+      sWidth = image.height * destinationRatio;
+      sx = (image.width - sWidth) / 2;
+    } else {
+      sHeight = image.width / destinationRatio;
+      sy = (image.height - sHeight) / 2;
+    }
+
+    ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+  }
+
+  function drawFineGrain(ctx) {
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+
+    for (let i = 0; i < 1500; i += 1) {
+      const x = Math.random() * CANVAS_WIDTH;
+      const y = Math.random() * CANVAS_HEIGHT;
+      const size = Math.random() * 1.4 + 0.3;
+      ctx.fillStyle = Math.random() > 0.6 ? "#ffffff" : "#000000";
+      ctx.fillRect(x, y, size, size);
+    }
+
+    ctx.restore();
+  }
+
+  function drawSoftLightLeak(ctx, palette) {
+    const gradient = ctx.createLinearGradient(0, 280, 420, 1120);
+    gradient.addColorStop(0, palette.glowC);
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 260, 420, 960);
+    ctx.restore();
+  }
+
+  function drawBackground(ctx, archetype) {
+    const palette = archetype.palette;
+
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    ctx.fillStyle = COLORS.background;
+    ctx.fillStyle = palette.base;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     ctx.save();
     ctx.globalCompositeOperation = "screen";
+    drawRadialGlow(ctx, 210, 200, 520, palette.glowA);
+    drawRadialGlow(ctx, 900, 920, 620, palette.glowB);
+    drawRadialGlow(ctx, 210, 1720, 460, palette.glowC);
+    ctx.restore();
 
-    drawRadialGlow(ctx, 180, 250, 650, [
-      [0, "rgba(216, 180, 248, 0.45)"],
-      [0.42, "rgba(216, 180, 248, 0.14)"],
-      [1, "rgba(216, 180, 248, 0)"]
-    ]);
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    roundedRect(ctx, 44, 44, CANVAS_WIDTH - 88, CANVAS_HEIGHT - 88, 36);
+    ctx.fill();
+    ctx.restore();
+  }
 
-    drawRadialGlow(ctx, 920, 860, 570, [
-      [0, "rgba(244, 162, 97, 0.32)"],
-      [0.5, "rgba(244, 162, 97, 0.10)"],
-      [1, "rgba(244, 162, 97, 0)"]
-    ]);
+  function drawPressPortrait(ctx, archetype) {
+    if (!pressImage) {
+      return;
+    }
 
-    drawRadialGlow(ctx, 260, 1760, 560, [
-      [0, "rgba(216, 180, 248, 0.24)"],
-      [0.5, "rgba(216, 180, 248, 0.07)"],
-      [1, "rgba(216, 180, 248, 0)"]
-    ]);
+    const palette = archetype.palette;
+
+    ctx.save();
+    ctx.beginPath();
+    roundedRect(ctx, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0);
+    ctx.clip();
+
+    drawImageCover(ctx, pressImage, 0, 380, CANVAS_WIDTH, 1160);
+
+    const portraitFade = ctx.createLinearGradient(0, 300, 0, 1600);
+    portraitFade.addColorStop(0, palette.overlayTop);
+    portraitFade.addColorStop(0.36, "rgba(15,17,35,0.10)");
+    portraitFade.addColorStop(0.82, palette.overlayBottom);
+    portraitFade.addColorStop(1, "rgba(8,10,22,0.94)");
+
+    ctx.fillStyle = portraitFade;
+    ctx.fillRect(0, 300, CANVAS_WIDTH, 1300);
+
+    const topMist = ctx.createLinearGradient(0, 0, 0, 520);
+    topMist.addColorStop(0, palette.base);
+    topMist.addColorStop(1, "rgba(15,17,35,0)");
+    ctx.fillStyle = topMist;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, 520);
+
+    const bottomMist = ctx.createLinearGradient(0, 1440, 0, 1920);
+    bottomMist.addColorStop(0, "rgba(15,17,35,0)");
+    bottomMist.addColorStop(1, palette.base);
+    ctx.fillStyle = bottomMist;
+    ctx.fillRect(0, 1440, CANVAS_WIDTH, 480);
 
     ctx.restore();
 
-    const wash = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    wash.addColorStop(0, "rgba(255,255,255,0.03)");
-    wash.addColorStop(0.5, "rgba(255,255,255,0)");
-    wash.addColorStop(1, "rgba(244,162,97,0.035)");
+    drawSoftLightLeak(ctx, palette);
+  }
 
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  function drawFrameAndBranding(ctx, archetype) {
+    const palette = archetype.palette;
 
     ctx.save();
 
     roundedRect(ctx, 42, 42, CANVAS_WIDTH - 84, CANVAS_HEIGHT - 84, 36);
-    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const borderGradient = ctx.createLinearGradient(65, 65, CANVAS_WIDTH - 65, CANVAS_HEIGHT - 65);
-    borderGradient.addColorStop(0, COLORS.lavender);
-    borderGradient.addColorStop(0.48, "rgba(216,180,248,0.15)");
-    borderGradient.addColorStop(1, COLORS.gold);
+    const borderGradient = ctx.createLinearGradient(64, 64, CANVAS_WIDTH - 64, CANVAS_HEIGHT - 64);
+    borderGradient.addColorStop(0, palette.accent);
+    borderGradient.addColorStop(0.55, "rgba(255,255,255,0.10)");
+    borderGradient.addColorStop(1, palette.quote);
 
     roundedRect(ctx, 64, 64, CANVAS_WIDTH - 128, CANVAS_HEIGHT - 128, 28);
     ctx.strokeStyle = borderGradient;
     ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.72;
+    ctx.globalAlpha = 0.74;
     ctx.stroke();
 
-    ctx.restore();
+    ctx.fillStyle = "#F8F4FF";
+    ctx.font = `800 24px ${FONT_FAMILIES.sans}`;
+    drawTrackedCenteredText(ctx, "CHIRAI // DAYDREAMING", CANVAS_WIDTH / 2, 130, 6);
 
-    ctx.save();
-    ctx.globalAlpha = 0.24;
-
-    const stars = [
-      [132, 310, 2.1], [904, 260, 1.8], [812, 525, 1.5],
-      [195, 760, 1.8], [940, 1120, 2.2], [160, 1380, 1.4],
-      [845, 1540, 1.8], [310, 1685, 1.5], [630, 280, 1.1],
-      [525, 990, 1.3], [740, 1750, 1.2], [284, 1120, 1.2]
-    ];
-
-    stars.forEach(([x, y, radius]) => {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fill();
-    });
-
-    ctx.restore();
-  }
-
-  function drawHeader(ctx) {
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = COLORS.text;
-    ctx.font = `800 25px ${FONT_FAMILIES.sans}`;
-
-    drawTrackedCenteredText(
-      ctx,
-      "CHIRAI // DAYDREAMING",
-      CANVAS_WIDTH / 2,
-      135,
-      6
-    );
-
-    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(110, 205);
-    ctx.lineTo(970, 205);
+    ctx.moveTo(106, 182);
+    ctx.lineTo(974, 182);
     ctx.stroke();
+
+    ctx.fillStyle = palette.quote;
+    ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
+    drawTrackedCenteredText(ctx, `ROMANTIC PROFILE ${archetype.index}`, CANVAS_WIDTH / 2, 238, 4);
 
     ctx.restore();
   }
 
-  function drawArchetype(ctx, archetype) {
+  function drawArchetypeBlock(ctx, archetype) {
+    const palette = archetype.palette;
+
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = "rgba(249,244,255,0.64)";
-    ctx.font = `700 22px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(
-      ctx,
-      "YOUR ROMANTIC PROFILE",
-      CANVAS_WIDTH / 2,
-      405,
-      5
-    );
-
-    let titleFontSize = 110;
-    ctx.font = `700 ${titleFontSize}px ${FONT_FAMILIES.serif}`;
-    let titleLines = wrapText(ctx, archetype.name, 830);
+    let titleSize = 108;
+    ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
+    let titleLines = wrapText(ctx, archetype.name, 810);
 
     if (titleLines.length > 3) {
-      titleFontSize = 94;
-      ctx.font = `700 ${titleFontSize}px ${FONT_FAMILIES.serif}`;
-      titleLines = wrapText(ctx, archetype.name, 830);
+      titleSize = 92;
+      ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
+      titleLines = wrapText(ctx, archetype.name, 810);
     }
 
-    const titleLineHeight = titleFontSize * 0.9;
-    const titleBlockHeight = titleLines.length * titleLineHeight;
-    const titleStartY = 620 - titleBlockHeight / 2 + titleLineHeight / 2;
+    const titleLineHeight = titleSize * 0.88;
+    const titleStartY = 315;
 
-    ctx.fillStyle = COLORS.lavender;
-    ctx.shadowColor = "rgba(216,180,248,0.26)";
-    ctx.shadowBlur = 34;
-
-    drawCenteredLines(
-      ctx,
-      titleLines,
-      CANVAS_WIDTH / 2,
-      titleStartY,
-      titleLineHeight
-    );
-
+    ctx.fillStyle = palette.accent;
+    ctx.shadowColor = palette.accent;
+    ctx.shadowBlur = 28;
+    drawCenteredLines(ctx, titleLines, CANVAS_WIDTH / 2, titleStartY, titleLineHeight);
     ctx.shadowBlur = 0;
 
-    const accentLine = ctx.createLinearGradient(350, 0, 730, 0);
-    accentLine.addColorStop(0, COLORS.lavender);
-    accentLine.addColorStop(1, COLORS.gold);
-
+    const underlineY = titleStartY + titleLines.length * titleLineHeight + 12;
+    const accentLine = ctx.createLinearGradient(318, 0, 762, 0);
+    accentLine.addColorStop(0, palette.accent);
+    accentLine.addColorStop(1, palette.quote);
     ctx.fillStyle = accentLine;
-    roundedRect(ctx, 350, 790, 380, 6, 3);
+    roundedRect(ctx, 318, underlineY, 444, 6, 3);
     ctx.fill();
 
-    ctx.fillStyle = COLORS.gold;
+    ctx.fillStyle = palette.quote;
     ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
+    const taglineLines = wrapText(ctx, `“${archetype.tagline}”`, 785);
+    const taglineStartY = underlineY + 88;
 
-    const quoteLines = wrapText(
-      ctx,
-      `“${archetype.tagline}”`,
-      790
-    );
-
-    drawCenteredLines(
-      ctx,
-      quoteLines,
-      CANVAS_WIDTH / 2,
-      900,
-      56
-    );
+    drawCenteredLines(ctx, taglineLines, CANVAS_WIDTH / 2, taglineStartY, 56);
 
     ctx.restore();
   }
 
-  function drawStatRow(ctx, label, value, y, isLast = false) {
-    const left = 138;
-    const valueX = 430;
-
-    ctx.save();
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-
-    ctx.fillStyle = COLORS.gold;
-    ctx.font = `800 22px ${FONT_FAMILIES.sans}`;
-    ctx.fillText(label, left, y);
-
-    ctx.fillStyle = COLORS.text;
-    ctx.font = `600 29px ${FONT_FAMILIES.sans}`;
-
-    const lines = wrapText(ctx, value.toUpperCase(), 505).slice(0, 2);
-
-    lines.forEach((line, index) => {
-      ctx.fillText(line, valueX, y + index * 36);
-    });
-
-    if (!isLast) {
-      const lineY = y + Math.max(68, lines.length * 36 + 28);
-      ctx.strokeStyle = "rgba(255,255,255,0.11)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(left, lineY);
-      ctx.lineTo(942, lineY);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  function drawStats(ctx, answers) {
-    const boxX = 92;
-    const boxY = 1120;
-    const boxWidth = 896;
-    const boxHeight = 470;
+  function drawEditorialStats(ctx, answers, archetype) {
+    const palette = archetype.palette;
+    const panelX = 98;
+    const panelY = 1365;
+    const panelW = 884;
+    const panelH = 298;
 
     ctx.save();
 
-    roundedRect(ctx, boxX, boxY, boxWidth, boxHeight, 32);
-    ctx.fillStyle = "rgba(12,14,31,0.62)";
+    roundedRect(ctx, panelX, panelY, panelW, panelH, 30);
+    ctx.fillStyle = "rgba(10,12,26,0.64)";
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(216,180,248,0.25)";
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const insetGradient = ctx.createLinearGradient(
-      boxX,
-      boxY,
-      boxX + boxWidth,
-      boxY + boxHeight
-    );
+    const gradient = ctx.createLinearGradient(panelX, panelY, panelX + panelW, panelY + panelH);
+    gradient.addColorStop(0, "rgba(216,180,248,0.08)");
+    gradient.addColorStop(1, "rgba(244,162,97,0.05)");
 
-    insetGradient.addColorStop(0, "rgba(216,180,248,0.07)");
-    insetGradient.addColorStop(1, "rgba(244,162,97,0.04)");
-
-    roundedRect(ctx, boxX + 18, boxY + 18, boxWidth - 36, boxHeight - 36, 24);
-    ctx.fillStyle = insetGradient;
+    roundedRect(ctx, panelX + 16, panelY + 16, panelW - 32, panelH - 32, 22);
+    ctx.fillStyle = gradient;
     ctx.fill();
 
+    const rows = [
+      ["LOVE LANGUAGE", answers.loveLanguage],
+      ["DEFAULT STATE", answers.mindset],
+      ["FOREVER LOOKS LIKE", SHORT_VISIONS[answers.foreverVision] || answers.foreverVision]
+    ];
+
+    const startX = panelX + 46;
+    let rowY = panelY + 74;
+
+    rows.forEach((row, index) => {
+      const [label, value] = row;
+
+      ctx.fillStyle = palette.quote;
+      ctx.font = `800 20px ${FONT_FAMILIES.sans}`;
+      ctx.fillText(label, startX, rowY);
+
+      ctx.fillStyle = "#F8F4FF";
+      ctx.font = `600 29px ${FONT_FAMILIES.sans}`;
+      const lines = wrapText(ctx, value.toUpperCase(), 610).slice(0, 2);
+
+      lines.forEach((line, lineIndex) => {
+        ctx.fillText(line, 390, rowY + lineIndex * 34);
+      });
+
+      if (index < rows.length - 1) {
+        const dividerY = rowY + Math.max(54, lines.length * 34 + 22);
+        ctx.strokeStyle = "rgba(255,255,255,0.10)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(startX, dividerY);
+        ctx.lineTo(panelX + panelW - 46, dividerY);
+        ctx.stroke();
+      }
+
+      rowY += 92;
+    });
+
     ctx.restore();
-
-    drawStatRow(
-      ctx,
-      "LOVE LANGUAGE",
-      answers.loveLanguage,
-      boxY + 92
-    );
-
-    drawStatRow(
-      ctx,
-      "MINDSET",
-      answers.mindset,
-      boxY + 225
-    );
-
-    drawStatRow(
-      ctx,
-      "FOREVER VISION",
-      SHORT_VISIONS[answers.foreverVision] || answers.foreverVision,
-      boxY + 358,
-      true
-    );
   }
 
-  function drawFooter(ctx) {
+  function drawFooter(ctx, archetype) {
+    const palette = archetype.palette;
+
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = COLORS.text;
-    ctx.font = `600 26px ${FONT_FAMILIES.sans}`;
-    ctx.fillText(
-      "Listen to ‘Daydreaming’ out now on all platforms.",
-      CANVAS_WIDTH / 2,
-      1740
-    );
+    ctx.fillStyle = "rgba(248,244,255,0.86)";
+    ctx.font = `italic 600 34px ${FONT_FAMILIES.serif}`;
+    ctx.fillText(archetype.kicker, CANVAS_WIDTH / 2, 1710);
 
-    ctx.fillStyle = "rgba(249,244,255,0.55)";
-    ctx.font = `700 19px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(
-      ctx,
-      "CHIRAI",
-      CANVAS_WIDTH / 2,
-      1820,
-      6
-    );
+    ctx.fillStyle = "rgba(248,244,255,0.80)";
+    ctx.font = `600 24px ${FONT_FAMILIES.sans}`;
+    ctx.fillText("Listen to ‘Daydreaming’ out now on all platforms.", CANVAS_WIDTH / 2, 1800);
+
+    ctx.fillStyle = palette.quote;
+    ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
+    drawTrackedCenteredText(ctx, "TAKE THE QUIZ • LISTEN TO DAY DREAMING", CANVAS_WIDTH / 2, 1852, 4);
 
     ctx.restore();
   }
@@ -508,15 +563,17 @@
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
 
-    drawBackground(context);
-    drawHeader(context);
-    drawArchetype(context, archetype);
-    drawStats(context, answers);
-    drawFooter(context);
+    drawBackground(context, archetype);
+    drawPressPortrait(context, archetype);
+    drawFrameAndBranding(context, archetype);
+    drawArchetypeBlock(context, archetype);
+    drawEditorialStats(context, answers, archetype);
+    drawFooter(context, archetype);
+    drawFineGrain(context);
 
     generatedDataUrl = canvas.toDataURL("image/png");
     preview.src = generatedDataUrl;
-    preview.alt = `${archetype.name} CHIRAI romantic profile story graphic`;
+    preview.alt = `${archetype.name} CHIRAI Day Dreaming artwork`;
   }
 
   function canvasToBlob() {
@@ -538,7 +595,7 @@
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    return `chirai-romantic-profile-${slug}.png`;
+    return `chirai-daydreaming-${slug}.png`;
   }
 
   function openDialog() {
@@ -580,7 +637,6 @@
       link.remove();
 
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-
       shareStatus.textContent = "Your 1080 × 1920 PNG is downloading.";
     } catch (error) {
       console.error(error);
@@ -633,7 +689,6 @@
       }
 
       await downloadImage();
-
       shareStatus.textContent =
         "Your browser does not support native sharing, so the PNG was downloaded instead.";
     } catch (error) {
@@ -669,18 +724,21 @@
     }
 
     const submitButton = form.querySelector('button[type="submit"]');
-    const originalButtonText = submitButton?.querySelector("span");
+    const labelSpan = submitButton?.querySelector("span");
 
     if (submitButton) {
       submitButton.disabled = true;
     }
 
-    if (originalButtonText) {
-      originalButtonText.textContent = "CREATING YOUR PROFILE...";
+    if (labelSpan) {
+      labelSpan.textContent = "CREATING YOUR ARTWORK...";
     }
 
     try {
-      await loadCanvasFonts();
+      await Promise.all([
+        loadCanvasFonts(),
+        loadPressImage()
+      ]);
 
       currentArchetype = getArchetype(
         answers.loveLanguage,
@@ -694,14 +752,14 @@
     } catch (error) {
       console.error(error);
       formStatus.textContent =
-        "Something went wrong while creating your profile. Please try again.";
+        "Something went wrong while creating your artwork. Please try again.";
     } finally {
       if (submitButton) {
         submitButton.disabled = false;
       }
 
-      if (originalButtonText) {
-        originalButtonText.textContent = "TELL ME MY ROMANTIC PROFILE";
+      if (labelSpan) {
+        labelSpan.textContent = "TELL ME MY ROMANTIC PROFILE";
       }
     }
   });
@@ -712,14 +770,11 @@
 
   editAnswersButton.addEventListener("click", () => {
     closeDialog();
-
-    const checkedInput = form.querySelector('input[type="radio"]:checked');
-    checkedInput?.focus();
+    form.querySelector('input[type="radio"]:checked')?.focus();
   });
 
   dialog.addEventListener("click", (event) => {
     const bounds = dialog.getBoundingClientRect();
-
     const clickedOutside =
       event.clientX < bounds.left ||
       event.clientX > bounds.right ||
