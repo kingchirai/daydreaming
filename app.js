@@ -35,11 +35,14 @@
         accent: "#D8B4F8",
         accentTwo: "#F5B3CF",
         quote: "#F4A261",
-        overlayTop: "rgba(15,17,35,0.28)",
-        overlayBottom: "rgba(15,17,35,0.82)",
-        glowA: "rgba(216,180,248,0.50)",
-        glowB: "rgba(245,179,207,0.34)",
-        glowC: "rgba(244,162,97,0.20)"
+        imageTint: "rgba(15,17,35,0.54)",
+        overlayTop: "rgba(10,12,24,0.58)",
+        overlayBottom: "rgba(7,9,18,0.86)",
+        titlePanel: "rgba(12,14,28,0.38)",
+        titlePanelStroke: "rgba(216,180,248,0.18)",
+        glowA: "rgba(216,180,248,0.34)",
+        glowB: "rgba(245,179,207,0.22)",
+        glowC: "rgba(244,162,97,0.14)"
       },
       kicker: "Apparently, this is how I imagine forever."
     },
@@ -53,11 +56,14 @@
         accent: "#D8B4F8",
         accentTwo: "#99B9F7",
         quote: "#EFC284",
-        overlayTop: "rgba(12,16,33,0.34)",
-        overlayBottom: "rgba(8,10,20,0.86)",
-        glowA: "rgba(153,185,247,0.30)",
-        glowB: "rgba(216,180,248,0.28)",
-        glowC: "rgba(244,162,97,0.12)"
+        imageTint: "rgba(8,12,22,0.60)",
+        overlayTop: "rgba(8,12,25,0.62)",
+        overlayBottom: "rgba(7,10,18,0.88)",
+        titlePanel: "rgba(9,13,24,0.42)",
+        titlePanelStroke: "rgba(153,185,247,0.16)",
+        glowA: "rgba(153,185,247,0.24)",
+        glowB: "rgba(216,180,248,0.18)",
+        glowC: "rgba(244,162,97,0.08)"
       },
       kicker: "Quiet love. Safe love. The world can wait."
     },
@@ -71,11 +77,14 @@
         accent: "#F4A261",
         accentTwo: "#D8B4F8",
         quote: "#F7D38E",
-        overlayTop: "rgba(16,20,42,0.24)",
-        overlayBottom: "rgba(11,12,24,0.82)",
-        glowA: "rgba(244,162,97,0.42)",
-        glowB: "rgba(216,180,248,0.25)",
-        glowC: "rgba(255,214,136,0.16)"
+        imageTint: "rgba(16,20,42,0.52)",
+        overlayTop: "rgba(13,18,34,0.54)",
+        overlayBottom: "rgba(8,10,18,0.84)",
+        titlePanel: "rgba(13,18,34,0.36)",
+        titlePanelStroke: "rgba(244,162,97,0.18)",
+        glowA: "rgba(244,162,97,0.28)",
+        glowB: "rgba(216,180,248,0.16)",
+        glowC: "rgba(255,214,136,0.10)"
       },
       kicker: "Love, but make it feel like the horizon."
     },
@@ -89,11 +98,14 @@
         accent: "#D8B4F8",
         accentTwo: "#F4A261",
         quote: "#F4A261",
-        overlayTop: "rgba(14,17,36,0.28)",
-        overlayBottom: "rgba(8,10,22,0.84)",
-        glowA: "rgba(216,180,248,0.38)",
-        glowB: "rgba(244,162,97,0.20)",
-        glowC: "rgba(255,255,255,0.08)"
+        imageTint: "rgba(14,17,36,0.56)",
+        overlayTop: "rgba(10,13,24,0.58)",
+        overlayBottom: "rgba(7,9,18,0.86)",
+        titlePanel: "rgba(11,14,27,0.40)",
+        titlePanelStroke: "rgba(216,180,248,0.16)",
+        glowA: "rgba(216,180,248,0.28)",
+        glowB: "rgba(244,162,97,0.14)",
+        glowC: "rgba(255,255,255,0.05)"
       },
       kicker: "I’m somewhere between a memory and a vision."
     }
@@ -151,20 +163,14 @@
 
     if (
       foreverVision === VISIONS.KITCHEN ||
-      (
-        foreverVision === VISIONS.SUNSET &&
-        romanticLanguages.has(loveLanguage)
-      )
+      (foreverVision === VISIONS.SUNSET && romanticLanguages.has(loveLanguage))
     ) {
       return ARCHETYPES.ROMANTIC;
     }
 
     if (
       foreverVision === VISIONS.HAVEN ||
-      (
-        foreverVision === VISIONS.SUNSET &&
-        sanctuaryLanguages.has(loveLanguage)
-      )
+      (foreverVision === VISIONS.SUNSET && sanctuaryLanguages.has(loveLanguage))
     ) {
       return ARCHETYPES.SANCTUARY;
     }
@@ -271,16 +277,6 @@
     });
   }
 
-  function drawRadialGlow(ctx, x, y, radius, color) {
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    gradient.addColorStop(0, color);
-    gradient.addColorStop(0.45, color.replace(/0\.\d+\)/, "0.10)"));
-    gradient.addColorStop(1, color.replace(/0\.\d+\)/, "0)"));
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-  }
-
   function drawImageCover(ctx, image, dx, dy, dWidth, dHeight) {
     const imageRatio = image.width / image.height;
     const destinationRatio = dWidth / dHeight;
@@ -301,30 +297,32 @@
     ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
   }
 
+  function fadeColorOpacity(color, replacement) {
+    return color.replace(/0\.\d+\)/, `${replacement})`);
+  }
+
+  function drawRadialGlow(ctx, x, y, radius, color) {
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(0.45, fadeColorOpacity(color, "0.08"));
+    gradient.addColorStop(1, fadeColorOpacity(color, "0"));
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
   function drawFineGrain(ctx) {
     ctx.save();
-    ctx.globalAlpha = 0.05;
+    ctx.globalAlpha = 0.045;
 
-    for (let i = 0; i < 1500; i += 1) {
+    for (let i = 0; i < 1400; i += 1) {
       const x = Math.random() * CANVAS_WIDTH;
       const y = Math.random() * CANVAS_HEIGHT;
-      const size = Math.random() * 1.4 + 0.3;
-      ctx.fillStyle = Math.random() > 0.6 ? "#ffffff" : "#000000";
+      const size = Math.random() * 1.2 + 0.3;
+      ctx.fillStyle = Math.random() > 0.62 ? "#ffffff" : "#000000";
       ctx.fillRect(x, y, size, size);
     }
 
-    ctx.restore();
-  }
-
-  function drawSoftLightLeak(ctx, palette) {
-    const gradient = ctx.createLinearGradient(0, 280, 420, 1120);
-    gradient.addColorStop(0, palette.glowC);
-    gradient.addColorStop(1, "rgba(255,255,255,0)");
-
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 260, 420, 960);
     ctx.restore();
   }
 
@@ -335,58 +333,42 @@
     ctx.fillStyle = palette.base;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    drawImageCover(ctx, pressImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    ctx.fillStyle = palette.imageTint;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    const topGradient = ctx.createLinearGradient(0, 0, 0, 840);
+    topGradient.addColorStop(0, palette.overlayTop);
+    topGradient.addColorStop(0.45, "rgba(8,10,20,0.34)");
+    topGradient.addColorStop(1, "rgba(8,10,20,0.08)");
+    ctx.fillStyle = topGradient;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, 840);
+
+    const bottomGradient = ctx.createLinearGradient(0, 1160, 0, CANVAS_HEIGHT);
+    bottomGradient.addColorStop(0, "rgba(8,10,20,0.18)");
+    bottomGradient.addColorStop(1, palette.overlayBottom);
+    ctx.fillStyle = bottomGradient;
+    ctx.fillRect(0, 1160, CANVAS_WIDTH, CANVAS_HEIGHT - 1160);
+
+    const sideVignette = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, 0);
+    sideVignette.addColorStop(0, "rgba(7,9,18,0.40)");
+    sideVignette.addColorStop(0.16, "rgba(7,9,18,0.06)");
+    sideVignette.addColorStop(0.84, "rgba(7,9,18,0.06)");
+    sideVignette.addColorStop(1, "rgba(7,9,18,0.40)");
+    ctx.fillStyle = sideVignette;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
     ctx.save();
     ctx.globalCompositeOperation = "screen";
-    drawRadialGlow(ctx, 210, 200, 520, palette.glowA);
-    drawRadialGlow(ctx, 900, 920, 620, palette.glowB);
-    drawRadialGlow(ctx, 210, 1720, 460, palette.glowC);
+    drawRadialGlow(ctx, 180, 170, 520, palette.glowA);
+    drawRadialGlow(ctx, 930, 900, 560, palette.glowB);
+    drawRadialGlow(ctx, 260, 1730, 420, palette.glowC);
     ctx.restore();
 
-    ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fillStyle = "rgba(255,255,255,0.02)";
     roundedRect(ctx, 44, 44, CANVAS_WIDTH - 88, CANVAS_HEIGHT - 88, 36);
     ctx.fill();
-    ctx.restore();
-  }
-
-  function drawPressPortrait(ctx, archetype) {
-    if (!pressImage) {
-      return;
-    }
-
-    const palette = archetype.palette;
-
-    ctx.save();
-    ctx.beginPath();
-    roundedRect(ctx, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, 0);
-    ctx.clip();
-
-    drawImageCover(ctx, pressImage, 0, 380, CANVAS_WIDTH, 1160);
-
-    const portraitFade = ctx.createLinearGradient(0, 300, 0, 1600);
-    portraitFade.addColorStop(0, palette.overlayTop);
-    portraitFade.addColorStop(0.36, "rgba(15,17,35,0.10)");
-    portraitFade.addColorStop(0.82, palette.overlayBottom);
-    portraitFade.addColorStop(1, "rgba(8,10,22,0.94)");
-
-    ctx.fillStyle = portraitFade;
-    ctx.fillRect(0, 300, CANVAS_WIDTH, 1300);
-
-    const topMist = ctx.createLinearGradient(0, 0, 0, 520);
-    topMist.addColorStop(0, palette.base);
-    topMist.addColorStop(1, "rgba(15,17,35,0)");
-    ctx.fillStyle = topMist;
-    ctx.fillRect(0, 0, CANVAS_WIDTH, 520);
-
-    const bottomMist = ctx.createLinearGradient(0, 1440, 0, 1920);
-    bottomMist.addColorStop(0, "rgba(15,17,35,0)");
-    bottomMist.addColorStop(1, palette.base);
-    ctx.fillStyle = bottomMist;
-    ctx.fillRect(0, 1440, CANVAS_WIDTH, 480);
-
-    ctx.restore();
-
-    drawSoftLightLeak(ctx, palette);
   }
 
   function drawFrameAndBranding(ctx, archetype) {
@@ -428,6 +410,19 @@
     ctx.restore();
   }
 
+  function drawTitlePanel(ctx, archetype, bottomY) {
+    const palette = archetype.palette;
+
+    ctx.save();
+    roundedRect(ctx, 82, 254, 916, bottomY - 254, 26);
+    ctx.fillStyle = palette.titlePanel;
+    ctx.fill();
+    ctx.strokeStyle = palette.titlePanelStroke;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawArchetypeBlock(ctx, archetype) {
     const palette = archetype.palette;
 
@@ -435,26 +430,34 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    let titleSize = 108;
+    let titleSize = 104;
     ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
-    let titleLines = wrapText(ctx, archetype.name, 810);
+    let titleLines = wrapText(ctx, archetype.name, 760);
 
     if (titleLines.length > 3) {
-      titleSize = 92;
+      titleSize = 90;
       ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
-      titleLines = wrapText(ctx, archetype.name, 810);
+      titleLines = wrapText(ctx, archetype.name, 760);
     }
 
     const titleLineHeight = titleSize * 0.88;
-    const titleStartY = 315;
+    const titleStartY = 356;
+    const underlineY = titleStartY + titleLines.length * titleLineHeight + 20;
+    const taglineStartY = underlineY + 92;
+    const taglineLineHeight = 54;
+    ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
+    const taglineLines = wrapText(ctx, `“${archetype.tagline}”`, 720);
+    const panelBottomY = taglineStartY + taglineLines.length * taglineLineHeight + 54;
 
+    drawTitlePanel(ctx, archetype, panelBottomY);
+
+    ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
     ctx.fillStyle = palette.accent;
-    ctx.shadowColor = palette.accent;
-    ctx.shadowBlur = 28;
+    ctx.shadowColor = "rgba(0,0,0,0.46)";
+    ctx.shadowBlur = 18;
     drawCenteredLines(ctx, titleLines, CANVAS_WIDTH / 2, titleStartY, titleLineHeight);
     ctx.shadowBlur = 0;
 
-    const underlineY = titleStartY + titleLines.length * titleLineHeight + 12;
     const accentLine = ctx.createLinearGradient(318, 0, 762, 0);
     accentLine.addColorStop(0, palette.accent);
     accentLine.addColorStop(1, palette.quote);
@@ -464,10 +467,7 @@
 
     ctx.fillStyle = palette.quote;
     ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
-    const taglineLines = wrapText(ctx, `“${archetype.tagline}”`, 785);
-    const taglineStartY = underlineY + 88;
-
-    drawCenteredLines(ctx, taglineLines, CANVAS_WIDTH / 2, taglineStartY, 56);
+    drawCenteredLines(ctx, taglineLines, CANVAS_WIDTH / 2, taglineStartY, taglineLineHeight);
 
     ctx.restore();
   }
@@ -475,17 +475,17 @@
   function drawEditorialStats(ctx, answers, archetype) {
     const palette = archetype.palette;
     const panelX = 98;
-    const panelY = 1365;
+    const panelY = 1368;
     const panelW = 884;
-    const panelH = 298;
+    const panelH = 300;
 
     ctx.save();
 
     roundedRect(ctx, panelX, panelY, panelW, panelH, 30);
-    ctx.fillStyle = "rgba(10,12,26,0.64)";
+    ctx.fillStyle = "rgba(8,10,22,0.72)";
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -504,7 +504,7 @@
     ];
 
     const startX = panelX + 46;
-    let rowY = panelY + 74;
+    let rowY = panelY + 70;
 
     rows.forEach((row, index) => {
       const [label, value] = row;
@@ -514,16 +514,16 @@
       ctx.fillText(label, startX, rowY);
 
       ctx.fillStyle = "#F8F4FF";
-      ctx.font = `600 29px ${FONT_FAMILIES.sans}`;
-      const lines = wrapText(ctx, value.toUpperCase(), 610).slice(0, 2);
+      ctx.font = `600 28px ${FONT_FAMILIES.sans}`;
+      const lines = wrapText(ctx, value.toUpperCase(), 600).slice(0, 2);
 
       lines.forEach((line, lineIndex) => {
         ctx.fillText(line, 390, rowY + lineIndex * 34);
       });
 
       if (index < rows.length - 1) {
-        const dividerY = rowY + Math.max(54, lines.length * 34 + 22);
-        ctx.strokeStyle = "rgba(255,255,255,0.10)";
+        const dividerY = rowY + Math.max(54, lines.length * 34 + 20);
+        ctx.strokeStyle = "rgba(255,255,255,0.11)";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(startX, dividerY);
@@ -544,17 +544,17 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    ctx.fillStyle = "rgba(248,244,255,0.86)";
-    ctx.font = `italic 600 34px ${FONT_FAMILIES.serif}`;
-    ctx.fillText(archetype.kicker, CANVAS_WIDTH / 2, 1710);
+    ctx.fillStyle = "rgba(248,244,255,0.92)";
+    ctx.font = `italic 600 32px ${FONT_FAMILIES.serif}`;
+    ctx.fillText(archetype.kicker, CANVAS_WIDTH / 2, 1735);
 
-    ctx.fillStyle = "rgba(248,244,255,0.80)";
+    ctx.fillStyle = "rgba(248,244,255,0.84)";
     ctx.font = `600 24px ${FONT_FAMILIES.sans}`;
-    ctx.fillText("Listen to ‘Daydreaming’ out now on all platforms.", CANVAS_WIDTH / 2, 1800);
+    ctx.fillText("Listen to ‘Daydreaming’ out now on all platforms.", CANVAS_WIDTH / 2, 1806);
 
     ctx.fillStyle = palette.quote;
     ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(ctx, "TAKE THE QUIZ • LISTEN TO DAY DREAMING", CANVAS_WIDTH / 2, 1852, 4);
+    drawTrackedCenteredText(ctx, "TAKE THE QUIZ • LISTEN TO DAY DREAMING", CANVAS_WIDTH / 2, 1858, 4);
 
     ctx.restore();
   }
@@ -564,7 +564,6 @@
     canvas.height = CANVAS_HEIGHT;
 
     drawBackground(context, archetype);
-    drawPressPortrait(context, archetype);
     drawFrameAndBranding(context, archetype);
     drawArchetypeBlock(context, archetype);
     drawEditorialStats(context, answers, archetype);
