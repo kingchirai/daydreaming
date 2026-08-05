@@ -27,7 +27,6 @@
   const ARCHETYPES = Object.freeze({
     ROMANTIC: {
       key: "romantic",
-      index: "01/04",
       name: "THE LIFELONG ROMANTIC",
       tagline: "Day Dreaming, seeing visions of us in a life far from here",
       palette: {
@@ -48,7 +47,6 @@
     },
     SANCTUARY: {
       key: "sanctuary",
-      index: "02/04",
       name: "THE SANCTUARY SEEKER",
       tagline: "Day Dreaming, seeing visions of us in the house on a hill",
       palette: {
@@ -69,7 +67,6 @@
     },
     ADVENTURER: {
       key: "adventurer",
-      index: "03/04",
       name: "THE ETERNAL ADVENTURER",
       tagline: "I come to realise, that it was all part of the plan",
       palette: {
@@ -90,7 +87,6 @@
     },
     DAYDREAMER: {
       key: "daydreamer",
-      index: "04/04",
       name: "THE DAYDREAMER",
       tagline: "Day Dreaming, seeing visions of us",
       palette: {
@@ -371,6 +367,23 @@
     ctx.fill();
   }
 
+
+  function fitTextToWidth(ctx, text, maxWidth, preferredSize, minSize, fontBuilder) {
+    let size = preferredSize;
+
+    while (size > minSize) {
+      ctx.font = fontBuilder(size);
+
+      if (ctx.measureText(text).width <= maxWidth) {
+        break;
+      }
+
+      size -= 1;
+    }
+
+    return size;
+  }
+
   function drawFrameAndBranding(ctx, archetype) {
     const palette = archetype.palette;
 
@@ -381,45 +394,44 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const borderGradient = ctx.createLinearGradient(64, 64, CANVAS_WIDTH - 64, CANVAS_HEIGHT - 64);
+    const borderGradient = ctx.createLinearGradient(
+      64,
+      64,
+      CANVAS_WIDTH - 64,
+      CANVAS_HEIGHT - 64
+    );
+
     borderGradient.addColorStop(0, palette.accent);
-    borderGradient.addColorStop(0.55, "rgba(255,255,255,0.10)");
+    borderGradient.addColorStop(0.55, "rgba(255,255,255,0.08)");
     borderGradient.addColorStop(1, palette.quote);
 
     roundedRect(ctx, 64, 64, CANVAS_WIDTH - 128, CANVAS_HEIGHT - 128, 28);
     ctx.strokeStyle = borderGradient;
     ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.74;
+    ctx.globalAlpha = 0.68;
     ctx.stroke();
-
-    ctx.fillStyle = "#F8F4FF";
-    ctx.font = `800 24px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(ctx, "CHIRAI // DAYDREAMING", CANVAS_WIDTH / 2, 130, 6);
-
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(106, 182);
-    ctx.lineTo(974, 182);
-    ctx.stroke();
-
-    ctx.fillStyle = palette.quote;
-    ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(ctx, `ROMANTIC PROFILE ${archetype.index}`, CANVAS_WIDTH / 2, 238, 4);
 
     ctx.restore();
   }
 
-  function drawTitlePanel(ctx, archetype, bottomY) {
+  function drawTitlePanel(ctx, archetype, topY, bottomY) {
     const palette = archetype.palette;
 
     ctx.save();
-    roundedRect(ctx, 82, 254, 916, bottomY - 254, 26);
-    ctx.fillStyle = palette.titlePanel;
+
+    const gradient = ctx.createLinearGradient(0, topY, 0, bottomY);
+    gradient.addColorStop(0, "rgba(7,9,18,0.42)");
+    gradient.addColorStop(0.5, "rgba(7,9,18,0.28)");
+    gradient.addColorStop(1, "rgba(7,9,18,0.08)");
+
+    roundedRect(ctx, 92, topY, 896, bottomY - topY, 32);
+    ctx.fillStyle = gradient;
     ctx.fill();
+
     ctx.strokeStyle = palette.titlePanelStroke;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
+
     ctx.restore();
   }
 
@@ -430,72 +442,80 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
-    let titleSize = 104;
+    let titleSize = 94;
     ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
-    let titleLines = wrapText(ctx, archetype.name, 760);
+    let titleLines = wrapText(ctx, archetype.name, 790);
 
-    if (titleLines.length > 3) {
-      titleSize = 90;
+    if (titleLines.length > 2) {
+      titleSize = 84;
       ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
-      titleLines = wrapText(ctx, archetype.name, 760);
+      titleLines = wrapText(ctx, archetype.name, 790);
     }
 
-    const titleLineHeight = titleSize * 0.88;
-    const titleStartY = 356;
-    const underlineY = titleStartY + titleLines.length * titleLineHeight + 20;
-    const taglineStartY = underlineY + 92;
-    const taglineLineHeight = 54;
-    ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
-    const taglineLines = wrapText(ctx, `“${archetype.tagline}”`, 720);
-    const panelBottomY = taglineStartY + taglineLines.length * taglineLineHeight + 54;
+    const titleLineHeight = titleSize * 0.86;
+    const titleStartY = 220;
+    const titleBottom = titleStartY + (titleLines.length - 1) * titleLineHeight;
 
-    drawTitlePanel(ctx, archetype, panelBottomY);
+    ctx.font = `italic 600 66px ${FONT_FAMILIES.serif}`;
+    let lyricLines = wrapText(ctx, `“${archetype.tagline}”`, 790);
+
+    if (lyricLines.length > 3) {
+      ctx.font = `italic 600 60px ${FONT_FAMILIES.serif}`;
+      lyricLines = wrapText(ctx, `“${archetype.tagline}”`, 790);
+    }
+
+    const lyricLineHeight = 72;
+    const lyricStartY = titleBottom + 168;
+    const panelBottomY = lyricStartY + (lyricLines.length - 1) * lyricLineHeight + 90;
+
+    drawTitlePanel(ctx, archetype, 130, panelBottomY);
 
     ctx.font = `700 ${titleSize}px ${FONT_FAMILIES.serif}`;
     ctx.fillStyle = palette.accent;
-    ctx.shadowColor = "rgba(0,0,0,0.46)";
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = "rgba(0,0,0,0.52)";
+    ctx.shadowBlur = 22;
     drawCenteredLines(ctx, titleLines, CANVAS_WIDTH / 2, titleStartY, titleLineHeight);
     ctx.shadowBlur = 0;
 
+    const underlineY = titleBottom + 76;
     const accentLine = ctx.createLinearGradient(318, 0, 762, 0);
     accentLine.addColorStop(0, palette.accent);
     accentLine.addColorStop(1, palette.quote);
+
     ctx.fillStyle = accentLine;
     roundedRect(ctx, 318, underlineY, 444, 6, 3);
     ctx.fill();
 
     ctx.fillStyle = palette.quote;
-    ctx.font = `italic 600 46px ${FONT_FAMILIES.serif}`;
-    drawCenteredLines(ctx, taglineLines, CANVAS_WIDTH / 2, taglineStartY, taglineLineHeight);
+    ctx.font = lyricLines.length > 3
+      ? `italic 600 60px ${FONT_FAMILIES.serif}`
+      : `italic 600 66px ${FONT_FAMILIES.serif}`;
+    ctx.shadowColor = "rgba(0,0,0,0.65)";
+    ctx.shadowBlur = 16;
+    drawCenteredLines(ctx, lyricLines, CANVAS_WIDTH / 2, lyricStartY, lyricLineHeight);
+    ctx.shadowBlur = 0;
 
     ctx.restore();
   }
 
   function drawEditorialStats(ctx, answers, archetype) {
     const palette = archetype.palette;
-    const panelX = 98;
-    const panelY = 1368;
-    const panelW = 884;
-    const panelH = 300;
+    const panelX = 96;
+    const panelY = 1390;
+    const panelW = 888;
+    const panelH = 390;
+    const contentX = panelX + 52;
+    const contentWidth = panelW - 104;
 
     ctx.save();
 
-    roundedRect(ctx, panelX, panelY, panelW, panelH, 30);
-    ctx.fillStyle = "rgba(8,10,22,0.72)";
+    roundedRect(ctx, panelX, panelY, panelW, panelH, 32);
+    ctx.fillStyle = "rgba(7,9,20,0.75)";
     ctx.fill();
 
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    const gradient = ctx.createLinearGradient(panelX, panelY, panelX + panelW, panelY + panelH);
-    gradient.addColorStop(0, "rgba(216,180,248,0.08)");
-    gradient.addColorStop(1, "rgba(244,162,97,0.05)");
-
-    roundedRect(ctx, panelX + 16, panelY + 16, panelW - 32, panelH - 32, 22);
-    ctx.fillStyle = gradient;
-    ctx.fill();
 
     const rows = [
       ["LOVE LANGUAGE", answers.loveLanguage],
@@ -503,60 +523,59 @@
       ["FOREVER LOOKS LIKE", SHORT_VISIONS[answers.foreverVision] || answers.foreverVision]
     ];
 
-    const startX = panelX + 46;
-    let rowY = panelY + 70;
+    const rowHeight = 116;
 
-    rows.forEach((row, index) => {
-      const [label, value] = row;
+    rows.forEach(([label, value], index) => {
+      const rowTop = panelY + 26 + index * rowHeight;
+      const valueMaxWidth = contentWidth;
 
       ctx.fillStyle = palette.quote;
-      ctx.font = `800 20px ${FONT_FAMILIES.sans}`;
-      ctx.fillText(label, startX, rowY);
+      ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
+      ctx.fillText(label, contentX, rowTop + 24);
+
+      const uppercaseValue = value.toUpperCase();
+      let valueSize = fitTextToWidth(
+        ctx,
+        uppercaseValue,
+        valueMaxWidth,
+        31,
+        23,
+        (size) => `700 ${size}px ${FONT_FAMILIES.sans}`
+      );
+
+      ctx.font = `700 ${valueSize}px ${FONT_FAMILIES.sans}`;
+      let lines = wrapText(ctx, uppercaseValue, valueMaxWidth).slice(0, 2);
+
+      if (lines.length > 1 && valueSize > 27) {
+        valueSize = 27;
+        ctx.font = `700 ${valueSize}px ${FONT_FAMILIES.sans}`;
+        lines = wrapText(ctx, uppercaseValue, valueMaxWidth).slice(0, 2);
+      }
 
       ctx.fillStyle = "#F8F4FF";
-      ctx.font = `600 28px ${FONT_FAMILIES.sans}`;
-      const lines = wrapText(ctx, value.toUpperCase(), 600).slice(0, 2);
+      const valueStartY = rowTop + 65;
+      const lineHeight = valueSize + 7;
 
       lines.forEach((line, lineIndex) => {
-        ctx.fillText(line, 390, rowY + lineIndex * 34);
+        ctx.fillText(line, contentX, valueStartY + lineIndex * lineHeight);
       });
 
       if (index < rows.length - 1) {
-        const dividerY = rowY + Math.max(54, lines.length * 34 + 20);
+        const dividerY = panelY + 26 + (index + 1) * rowHeight - 8;
         ctx.strokeStyle = "rgba(255,255,255,0.11)";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(startX, dividerY);
-        ctx.lineTo(panelX + panelW - 46, dividerY);
+        ctx.moveTo(contentX, dividerY);
+        ctx.lineTo(panelX + panelW - 52, dividerY);
         ctx.stroke();
       }
-
-      rowY += 92;
     });
 
     ctx.restore();
   }
 
-  function drawFooter(ctx, archetype) {
-    const palette = archetype.palette;
-
-    ctx.save();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillStyle = "rgba(248,244,255,0.92)";
-    ctx.font = `italic 600 32px ${FONT_FAMILIES.serif}`;
-    ctx.fillText(archetype.kicker, CANVAS_WIDTH / 2, 1735);
-
-    ctx.fillStyle = "rgba(248,244,255,0.84)";
-    ctx.font = `600 24px ${FONT_FAMILIES.sans}`;
-    ctx.fillText("Listen to ‘Daydreaming’ out now on all platforms.", CANVAS_WIDTH / 2, 1806);
-
-    ctx.fillStyle = palette.quote;
-    ctx.font = `800 18px ${FONT_FAMILIES.sans}`;
-    drawTrackedCenteredText(ctx, "TAKE THE QUIZ • LISTEN TO DAY DREAMING", CANVAS_WIDTH / 2, 1858, 4);
-
-    ctx.restore();
+  function drawFooter() {
+    // Intentionally empty: the artwork ends with the Day Dreaming ID details.
   }
 
   function renderStory(answers, archetype) {
@@ -567,7 +586,6 @@
     drawFrameAndBranding(context, archetype);
     drawArchetypeBlock(context, archetype);
     drawEditorialStats(context, answers, archetype);
-    drawFooter(context, archetype);
     drawFineGrain(context);
 
     generatedDataUrl = canvas.toDataURL("image/png");
@@ -594,7 +612,7 @@
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    return `chirai-daydreaming-${slug}.png`;
+    return `chirai-day-dreaming-id-${slug}.png`;
   }
 
   function openDialog() {
@@ -619,7 +637,7 @@
 
   async function downloadImage() {
     if (!generatedDataUrl) {
-      shareStatus.textContent = "Generate your romantic profile first.";
+      shareStatus.textContent = "Generate your Day Dreaming ID first.";
       return;
     }
 
@@ -645,7 +663,7 @@
 
   async function shareImage() {
     if (!generatedDataUrl) {
-      shareStatus.textContent = "Generate your romantic profile first.";
+      shareStatus.textContent = "Generate your Day Dreaming ID first.";
       return;
     }
 
@@ -661,7 +679,7 @@
 
       const shareData = {
         title: "Day Dreaming with CHIRAI",
-        text: `My CHIRAI romantic profile is ${currentArchetype.name}.`,
+        text: `My CHIRAI Day Dreaming ID is ${currentArchetype.name}.`,
         files: [file]
       };
 
@@ -758,7 +776,7 @@
       }
 
       if (labelSpan) {
-        labelSpan.textContent = "TELL ME MY ROMANTIC PROFILE";
+        labelSpan.textContent = "TELL ME MY DAY DREAMING ID";
       }
     }
   });

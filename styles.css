@@ -164,46 +164,40 @@ label {
 .question-group {
   min-width: 0;
   margin: 0;
-  padding: 1.2rem 0;
+  padding: 1.45rem 0;
   border: 0;
   border-bottom: 1px solid var(--line);
 }
 
 .question-group--last {
   border-bottom: 0;
+  padding-bottom: 1.2rem;
 }
 
 .question-group legend {
-  display: flex;
+  display: block;
   width: 100%;
-  align-items: flex-start;
-  gap: 0.7rem;
-  margin: 0 0 0.7rem;
+  margin: 0 0 0.85rem;
   padding: 0;
-  font-size: 0.94rem;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.question-number {
-  flex: 0 0 auto;
-  color: var(--gold);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  line-height: 1.8;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: clamp(1.12rem, 3vw, 1.34rem);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
 .answer-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
 }
 
 .answer-pill,
 .answer-card {
   position: relative;
   display: block;
+  min-width: 0;
   cursor: pointer;
 }
 
@@ -220,10 +214,16 @@ label {
 .answer-card span {
   position: relative;
   display: flex;
+  width: 100%;
+  min-height: 3rem;
   align-items: center;
+  padding: 0.72rem 2.65rem 0.72rem 0.95rem;
   border: 1px solid var(--line);
+  border-radius: var(--radius-small);
   background: var(--surface-soft);
   color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.32;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
@@ -232,32 +232,13 @@ label {
     box-shadow 160ms ease;
 }
 
-.answer-pill span {
-  min-height: 2.55rem;
-  padding: 0.62rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.answer-card {
-  flex: 1 1 100%;
-}
-
-.answer-card span {
-  min-height: 3.2rem;
-  padding: 0.75rem 2.6rem 0.75rem 0.9rem;
-  border-radius: var(--radius-small);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
+.answer-pill span::after,
 .answer-card span::after {
   position: absolute;
-  right: 0.9rem;
+  right: 0.92rem;
   display: grid;
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.1rem;
+  height: 1.1rem;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 50%;
@@ -269,7 +250,7 @@ label {
 .answer-pill:hover span,
 .answer-card:hover span {
   transform: translateY(-1px);
-  border-color: rgba(216, 180, 248, 0.38);
+  border-color: rgba(216, 180, 248, 0.42);
   color: var(--text);
 }
 
@@ -283,6 +264,7 @@ label {
   box-shadow: inset 0 0 0 1px rgba(216, 180, 248, 0.12);
 }
 
+.answer-pill input:checked + span::after,
 .answer-card input:checked + span::after {
   border-color: var(--gold);
   background: var(--gold);
@@ -463,29 +445,60 @@ label {
   text-align: center;
 }
 
-@media (min-width: 560px) {
+@media (min-width: 620px) {
   .page-shell {
-    padding-top: 4.5rem;
+    width: min(100% - 2rem, 920px);
+    padding-top: 4.75rem;
   }
 
-  .answer-grid--compact .answer-pill {
-    flex: 0 0 auto;
+  .quiz-panel {
+    padding: 2.25rem 2.5rem;
   }
 
-  .answer-grid--two .answer-pill {
-    flex: 1 1 calc(50% - 0.25rem);
+  .answer-grid--compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .answer-grid--two .answer-pill span {
-    justify-content: center;
+  .answer-grid--compact .answer-pill:nth-child(4),
+  .answer-grid--compact .answer-pill:nth-child(5) {
+    grid-column: span 1;
   }
 
-  .answer-card {
-    flex-basis: calc(50% - 0.25rem);
+  .answer-grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .answer-grid--visions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .answer-pill span,
+  .answer-card span {
+    min-height: 3.45rem;
+    justify-content: flex-start;
+    font-size: 0.86rem;
   }
 
   .result-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .answer-grid--compact {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .answer-grid--compact .answer-pill:nth-child(4),
+  .answer-grid--compact .answer-pill:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .answer-grid--compact .answer-pill span {
+    min-height: 4.2rem;
+    justify-content: center;
+    padding: 0.8rem 2.3rem 0.8rem 0.8rem;
+    text-align: center;
   }
 }
 
