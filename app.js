@@ -135,6 +135,36 @@
   let generatedMp4Blob = null;
   let currentArchetype = ARCHETYPES.DAYDREAMER;
   let ffmpegInstance = null;
+  let lastFfmpegLog = "";
+
+  async function fetchFileData(source) {
+    if (source instanceof Uint8Array) {
+      return source;
+    }
+
+    if (source instanceof Blob) {
+      return new Uint8Array(await source.arrayBuffer());
+    }
+
+    const response = await fetch(source);
+
+    if (!response.ok) {
+      throw new Error(`Unable to load ${source} (${response.status}).`);
+    }
+
+    return new Uint8Array(await response.arrayBuffer());
+  }
+
+  async function toBlobURL(url, mimeType) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Unable to load FFmpeg core (${response.status}).`);
+    }
+
+    const blob = new Blob([await response.arrayBuffer()], { type: mimeType });
+    return URL.createObjectURL(blob);
+  }
   const imageCache = new Map();
 
   function getArchetype(loveLanguage, foreverVision) {
@@ -577,47 +607,143 @@
   }
 
   async function ensureFFmpeg() {
-    if (ffmpegInstance) return ffmpegInstance;
-    if (!window.FFmpegWASM || !window.FFmpegUtil) throw new Error("FFmpeg could not be loaded.");
+    if (ffmpegInstance) {
+      return ffmpegInstance;
+    }
+
+    if (!window.FFmpegWASM?.FFmpeg) {
+      throw new Error("The local FFmpeg worker files did not load.");
+    }
+
     const { FFmpeg } = window.FFmpegWASM;
-    const { toBlobURL } = window.FFmpegUtil;
-    const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
+    const coreBaseURL =
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+
+    shareStatus.textContent =
+      "Loading the video engine for the first export (about 30 MB)...";
+
     const ffmpeg = new FFmpeg();
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm")
+
+    ffmpeg.on("log", ({ message }) => {
+      lastFfmpegLog = message;
+      console.log("[ffmpeg]", message);
     });
+
+    await ffmpeg.load({
+      coreURL: await toBlobURL(
+        `${coreBaseURL}/ffmpeg-core.js`,
+        "text/javascript"
+      ),
+      wasmURL: await toBlobURL(
+        `${coreBaseURL}/ffmpeg-core.wasm`,
+        "application/wasm"
+      )
+    });
+
     ffmpegInstance = ffmpeg;
     return ffmpegInstance;
   }
 
-  async function buildMp4() {
-    if (generatedMp4Blob) return generatedMp4Blob;
-    if (!generatedBlob) throw new Error("Generate the artwork before exporting video.");
-    const ffmpeg = await ensureFFmpeg();
-    const { fetchFile } = window.FFmpegUtil;
-    shareStatus.textContent = "Preparing 15-second video...";
-    await ffmpeg.writeFile("frame.png", await fetchFile(generatedBlob));
-    await ffmpeg.writeFile("audio.mp3", await fetchFile(AUDIO_PATH));
+  async function safelyDeleteFfmpegFile(ffmpeg, path) {
+    try {
+      await ffmpeg.deleteFile(path);
+    } catch {
+      // The file may not exist yet.
+    }
+  }
 
-    const tryCommands = [
-      ["-loop","1","-framerate","30","-i","frame.png","-stream_loop","-1","-i","audio.mp3","-t",String(VIDEO_DURATION),"-c:v","libx264","-pix_fmt","yuv420p","-c:a","aac","-shortest","output.mp4"],
-      ["-loop","1","-framerate","30","-i","frame.png","-stream_loop","-1","-i","audio.mp3","-t",String(VIDEO_DURATION),"-c:v","mpeg4","-q:v","4","-pix_fmt","yuv420p","-c:a","aac","-shortest","output.mp4"]
+  async function buildMp4() {
+    if (generatedMp4Blob) {
+      return generatedMp4Blob;
+    }
+
+    if (!generatedBlob) {
+      throw new Error("Generate the artwork before exporting video.");
+    }
+
+    const ffmpeg = await ensureFFmpeg();
+
+    await safelyDeleteFfmpegFile(ffmpeg, "frame.png");
+    await safelyDeleteFfmpegFile(ffmpeg, "audio.mp3");
+    await safelyDeleteFfmpegFile(ffmpeg, "output.mp4");
+
+    shareStatus.textContent = "Preparing the 15-second MP4...";
+
+    await ffmpeg.writeFile("frame.png", await fetchFileData(generatedBlob));
+    await ffmpeg.writeFile("audio.mp3", await fetchFileData(AUDIO_PATH));
+
+    // The artwork is static, so encoding at one frame per second is visually
+    // identical while using dramatically less memory and CPU in the browser.
+    const commands = [
+      [
+        "-loop", "1",
+        "-framerate", "1",
+        "-i", "frame.png",
+        "-i", "audio.mp3",
+        "-t", String(VIDEO_DURATION),
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "stillimage",
+        "-crf", "23",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "160k",
+        "-ar", "44100",
+        "-ac", "2",
+        "-movflags", "+faststart",
+        "-shortest",
+        "output.mp4"
+      ],
+      [
+        "-loop", "1",
+        "-framerate", "1",
+        "-i", "frame.png",
+        "-i", "audio.mp3",
+        "-t", String(VIDEO_DURATION),
+        "-c:v", "mpeg4",
+        "-q:v", "4",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac",
+        "-b:a", "160k",
+        "-shortest",
+        "output.mp4"
+      ]
     ];
 
-    let ok = false;
-    let lastError = null;
-    for (const command of tryCommands) {
+    let succeeded = false;
+    let failure = null;
+
+    for (const command of commands) {
+      await safelyDeleteFfmpegFile(ffmpeg, "output.mp4");
+      lastFfmpegLog = "";
+
       try {
-        await ffmpeg.exec(command);
-        ok = true;
+        const exitCode = await ffmpeg.exec(command);
+
+        if (exitCode !== 0) {
+          throw new Error(
+            `FFmpeg exited with code ${exitCode}. ${lastFfmpegLog}`
+          );
+        }
+
+        succeeded = true;
         break;
       } catch (error) {
-        lastError = error;
+        failure = error;
+        console.error("MP4 command failed:", error);
       }
     }
-    if (!ok) throw lastError || new Error("Video export failed.");
+
+    if (!succeeded) {
+      throw failure || new Error(lastFfmpegLog || "Video export failed.");
+    }
+
     const data = await ffmpeg.readFile("output.mp4");
+
+    if (!data?.byteLength) {
+      throw new Error("FFmpeg created an empty MP4 file.");
+    }
+
     generatedMp4Blob = new Blob([data.buffer], { type: "video/mp4" });
     return generatedMp4Blob;
   }
@@ -644,7 +770,11 @@
       shareStatus.textContent = "Your 15-second MP4 is downloading.";
     } catch (error) {
       console.error(error);
-      shareStatus.textContent = "The MP4 could not be created in this browser. Please try Chrome or Edge.";
+      const detail = lastFfmpegLog
+        ? ` Last video-engine message: ${lastFfmpegLog}`
+        : "";
+      shareStatus.textContent =
+        `The MP4 export failed.${detail} Refresh the page and try once more.`;
     } finally {
       downloadVideoButton.disabled = false;
       downloadButton.disabled = false;
