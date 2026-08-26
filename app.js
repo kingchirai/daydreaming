@@ -3,8 +3,15 @@
 
   const CANVAS_WIDTH = 1080;
   const CANVAS_HEIGHT = 1920;
-  const AUDIO_PATH = "./day-dreaming-audio.mp3";
+  const HOMEPAGE_AUDIO_PATH = "./homepage-audio.mp3";
   const VIDEO_DURATION = 15;
+
+  const ARCHETYPE_AUDIO_PATHS = Object.freeze({
+    romantic: "./archetype-romantic.mp3",
+    sanctuary: "./archetype-sanctuary.mp3",
+    adventurer: "./archetype-adventurer.mp3",
+    daydreamer: "./archetype-daydreamer.mp3"
+  });
 
   const FONT_FAMILIES = Object.freeze({
     serif: '"Cormorant Garamond", Georgia, serif',
@@ -183,6 +190,10 @@
     return ARCHETYPES.DAYDREAMER;
   }
 
+  function getCurrentArchetypeAudioPath() {
+    return ARCHETYPE_AUDIO_PATHS[currentArchetype.key] || ARCHETYPE_AUDIO_PATHS.daydreamer;
+  }
+
   function getAnswers() {
     const data = new FormData(form);
     return {
@@ -260,6 +271,7 @@
   });
 
   window.addEventListener("load", async () => {
+    audioElement.src = HOMEPAGE_AUDIO_PATH;
     updateAudioButton();
     const started = await attemptAudioPlayback();
     if (!started) queueAudioResume();
@@ -667,10 +679,10 @@
     await safelyDeleteFfmpegFile(ffmpeg, "audio.mp3");
     await safelyDeleteFfmpegFile(ffmpeg, "output.mp4");
 
-    shareStatus.textContent = "Preparing the 15-second MP4...";
+    shareStatus.textContent = "Preparing the 15-second MP4 with your archetype audio...";
 
     await ffmpeg.writeFile("frame.png", await fetchFileData(generatedBlob));
-    await ffmpeg.writeFile("audio.mp3", await fetchFileData(AUDIO_PATH));
+    await ffmpeg.writeFile("audio.mp3", await fetchFileData(getCurrentArchetypeAudioPath()));
 
     // The artwork is static, so encoding at one frame per second is visually
     // identical while using dramatically less memory and CPU in the browser.
