@@ -43,7 +43,7 @@
     ROMANTIC: {
       key: "romantic",
       name: "THE LIFELONG ROMANTIC",
-      tagline: "Day Dreaming, seeing visions of us in a life far from here",
+      tagline: "Daydreaming, seeing visions of us in a life far from here",
       palette: {
         base: "#0F1123",
         accent: "#D8B4F8",
@@ -60,7 +60,7 @@
     SANCTUARY: {
       key: "sanctuary",
       name: "THE SANCTUARY SEEKER",
-      tagline: "Day Dreaming, seeing visions of us in the house on a hill",
+      tagline: "Daydreaming, seeing visions of us in the house on a hill",
       palette: {
         base: "#0C1021",
         accent: "#D8B4F8",
@@ -94,7 +94,7 @@
     DAYDREAMER: {
       key: "daydreamer",
       name: "THE DAYDREAMER",
-      tagline: "Day Dreaming, seeing visions of us",
+      tagline: "Daydreaming, seeing visions of us",
       palette: {
         base: "#0E1124",
         accent: "#D8B4F8",
@@ -127,7 +127,7 @@
   if (!form || !formStatus || !canvas || !preview || !dialog || !closeDialogButton ||
       !downloadButton || !downloadVideoButton || !shareButton || !editAnswersButton ||
       !shareStatus || !audioElement || !audioToggle) {
-    console.error("The CHIRAI Day Dreaming app could not initialise.");
+    console.error("The CHIRAI Daydreaming app could not initialise.");
     return;
   }
 
@@ -568,7 +568,7 @@
     drawFineGrain(context);
     generatedDataUrl = canvas.toDataURL("image/png");
     preview.src = generatedDataUrl;
-    preview.alt = `${archetype.name} CHIRAI Day Dreaming ID artwork`;
+    preview.alt = `${archetype.name} CHIRAI Daydreaming ID artwork`;
   }
 
   function canvasToBlob() {
@@ -579,7 +579,7 @@
 
   function getFileName(extension) {
     const slug = currentArchetype.name.toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    return `chirai-day-dreaming-id-${slug}.${extension}`;
+    return `chirai-daydreaming-id-${slug}.${extension}`;
   }
 
   function openDialog() {
@@ -598,7 +598,7 @@
 
   async function downloadImage() {
     if (!generatedDataUrl) {
-      shareStatus.textContent = "Generate your Day Dreaming ID first.";
+      shareStatus.textContent = "Generate your Daydreaming ID first.";
       return;
     }
     try {
@@ -762,7 +762,7 @@
 
   async function downloadVideo() {
     if (!generatedDataUrl) {
-      shareStatus.textContent = "Generate your Day Dreaming ID first.";
+      shareStatus.textContent = "Generate your Daydreaming ID first.";
       return;
     }
     downloadVideoButton.disabled = true;
@@ -796,7 +796,7 @@
 
   async function shareImage() {
     if (!generatedDataUrl) {
-      shareStatus.textContent = "Generate your Day Dreaming ID first.";
+      shareStatus.textContent = "Generate your Daydreaming ID first.";
       return;
     }
     shareButton.disabled = true;
@@ -805,8 +805,8 @@
       const blob = generatedBlob || await canvasToBlob();
       const file = new File([blob], getFileName("png"), { type: "image/png", lastModified: Date.now() });
       const shareData = {
-        title: "Day Dreaming with CHIRAI",
-        text: `My CHIRAI Day Dreaming ID is ${currentArchetype.name}.`,
+        title: "Daydreaming with CHIRAI",
+        text: `My CHIRAI Daydreaming ID is ${currentArchetype.name}.`,
         files: [file]
       };
 
@@ -869,7 +869,7 @@
       formStatus.textContent = "Something went wrong while creating your artwork. Please try again.";
     } finally {
       if (submitButton) submitButton.disabled = false;
-      if (labelSpan) labelSpan.textContent = "TELL ME MY DAY DREAMING ID";
+      if (labelSpan) labelSpan.textContent = "TELL ME MY DAYDREAMING ID";
     }
   });
 
